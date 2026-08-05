@@ -2,76 +2,169 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
   <title>CloudMenu</title>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <header class="header">
-    <div>
-      <p class="eyebrow">Bàn số 05</p>
-      <h1>CloudMenu</h1>
-      <p class="subtitle">Chọn món và gọi món ngay tại bàn</p>
-    </div>
-
-    <button id="cart-button" class="cart-button">
-      Giỏ hàng
-      <span id="cart-count">0</span>
-    </button>
-  </header>
-
-  <main class="container">
-    <section class="toolbar">
-      <input
-        id="search-input"
-        type="search"
-        placeholder="Tìm món ăn..."
-      />
-
-      <div id="category-list" class="category-list"></div>
-    </section>
-
-    <section>
-      <div class="section-heading">
-        <h2>Thực đơn</h2>
-        <span id="menu-count"></span>
+  <!-- Hiện khi người dùng chưa vào bằng QR hợp lệ -->
+  <section
+    id="qr-required-screen"
+    class="qr-required-screen"
+  >
+    <div class="qr-required-card">
+      <div class="qr-required-icon">
+        ▦
       </div>
 
-      <div id="menu-list" class="menu-grid"></div>
-    </section>
-  </main>
+      <p class="eyebrow">
+        CloudMenu
+      </p>
 
-  <aside id="cart-panel" class="cart-panel">
-    <div class="cart-header">
+      <h1>Vui lòng quét mã QR tại bàn</h1>
+
+      <p class="qr-required-description">
+        Sử dụng Camera, Zalo hoặc ứng dụng quét QR
+        trên điện thoại để mở đúng thực đơn của bàn.
+      </p>
+
+      <div class="qr-required-note">
+        Mỗi bàn sử dụng một mã QR riêng.
+      </div>
+    </div>
+  </section>
+
+  <!-- Chỉ hiện khi URL có mã bàn hợp lệ -->
+  <div
+    id="app-content"
+    class="app-content hidden"
+  >
+    <header class="header">
       <div>
-        <p class="eyebrow">Bàn số 05</p>
-        <h2>Đơn gọi món</h2>
+        <p
+          id="table-label"
+          class="eyebrow"
+        >
+          Đang xác định bàn...
+        </p>
+
+        <h1>CloudMenu</h1>
+
+        <p class="subtitle">
+          Chọn món và gọi thêm món ngay tại bàn
+        </p>
       </div>
 
-      <button id="close-cart" class="icon-button" aria-label="Đóng">
-        ×
+      <button
+        id="cart-button"
+        class="cart-button"
+        type="button"
+      >
+        Giỏ hàng
+
+        <span id="cart-count">
+          0
+        </span>
       </button>
-    </div>
+    </header>
 
-    <div id="cart-items" class="cart-items"></div>
+    <main class="container">
+      <section class="toolbar">
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Tìm món ăn..."
+          autocomplete="off"
+        />
 
-    <div class="cart-footer">
-      <div class="total-row">
-        <span>Tổng cộng</span>
-        <strong id="cart-total">0 ₫</strong>
+        <div
+          id="category-list"
+          class="category-list"
+        ></div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <h2>Thực đơn</h2>
+
+          <span id="menu-count"></span>
+        </div>
+
+        <div
+          id="menu-list"
+          class="menu-grid"
+        ></div>
+      </section>
+    </main>
+
+    <aside
+      id="cart-panel"
+      class="cart-panel"
+    >
+      <div class="cart-header">
+        <div>
+          <p
+            id="cart-table-label"
+            class="eyebrow"
+          >
+            Đang xác định bàn...
+          </p>
+
+          <h2>Đơn gọi món</h2>
+        </div>
+
+        <button
+          id="close-cart"
+          class="icon-button"
+          type="button"
+          aria-label="Đóng giỏ hàng"
+        >
+          ×
+        </button>
       </div>
 
-      <button id="submit-order" class="primary-button">
-        Gửi đơn gọi món
-      </button>
-    </div>
-  </aside>
+      <div
+        id="cart-items"
+        class="cart-items"
+      ></div>
 
-  <div id="overlay" class="overlay"></div>
+      <div class="cart-footer">
+        <div class="total-row">
+          <span>Tổng cộng</span>
 
-  <div id="toast" class="toast"></div>
+          <strong id="cart-total">
+            0 VND
+          </strong>
+        </div>
 
-  <script src="app.js"></script>
+        <button
+          id="submit-order"
+          class="primary-button"
+          type="button"
+        >
+          Gửi đơn gọi món
+        </button>
+      </div>
+    </aside>
+
+    <div
+      id="overlay"
+      class="overlay"
+    ></div>
+
+    <div
+      id="toast"
+      class="toast"
+    ></div>
+  </div>
+
+  <script src="./app.js"></script>
 </body>
 </html>

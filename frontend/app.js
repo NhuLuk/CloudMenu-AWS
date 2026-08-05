@@ -1,10 +1,16 @@
+const API_URL =
+  "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com";
+
+/* ===== MENU DATA ===== */
+
 const menuItems = [
   {
     id: "food-001",
     name: "Lẩu Thái Hải Sản",
     category: "Món chính",
     price: 289000,
-    description: "Vị chua cay, dùng kèm tôm, mực và rau tươi.",
+    description:
+      "Vị chua cay, dùng kèm tôm, mực và rau tươi.",
     image: "images/Lauthaihaisan.png",
   },
   {
@@ -21,7 +27,8 @@ const menuItems = [
     name: "Cơm Chiên Hải Sản",
     category: "Món chính",
     price: 79000,
-    description: "Cơm chiên cùng tôm, mực, trứng và rau củ.",
+    description:
+      "Cơm chiên cùng tôm, mực, trứng và rau củ.",
     image: "images/comchienhaisan.jpg",
   },
   {
@@ -47,7 +54,8 @@ const menuItems = [
     name: "Trà Đào",
     category: "Đồ uống",
     price: 39000,
-    description: "Trà đào thanh mát, dùng kèm lát đào ngâm.",
+    description:
+      "Trà đào thanh mát, dùng kèm lát đào ngâm.",
     image: "images/tradao.jpg",
   },
   {
@@ -55,7 +63,8 @@ const menuItems = [
     name: "Nước Cam",
     category: "Đồ uống",
     price: 45000,
-    description: "Nước cam tươi, vị chua ngọt tự nhiên.",
+    description:
+      "Nước cam tươi, vị chua ngọt tự nhiên.",
     image: "images/nuoccam.jpg",
   },
   {
@@ -63,7 +72,8 @@ const menuItems = [
     name: "Nước Lọc",
     category: "Đồ uống",
     price: 10000,
-    description: "Nước suối tinh khiết, phục vụ mát lạnh.",
+    description:
+      "Nước suối tinh khiết, phục vụ mát lạnh.",
     image: "images/nuocloc.jpg",
   },
   {
@@ -71,7 +81,8 @@ const menuItems = [
     name: "Trà Đá",
     category: "Đồ uống",
     price: 3000,
-    description: "Trà đá thanh mát, dùng kèm theo bữa ăn.",
+    description:
+      "Trà đá thanh mát, dùng kèm theo bữa ăn.",
     image: "images/trada.jpg",
   },
   {
@@ -79,7 +90,8 @@ const menuItems = [
     name: "Panna Cotta",
     category: "Tráng miệng",
     price: 49000,
-    description: "Panna cotta mềm mịn, dùng cùng sốt dâu.",
+    description:
+      "Panna cotta mềm mịn, dùng cùng sốt dâu.",
     image: "images/pannacotta.jpg",
   },
   {
@@ -111,114 +123,272 @@ const menuItems = [
   },
 ];
 
-/* ===== TRẠNG THÁI ỨNG DỤNG ===== */
+/* ===== TABLE ACCESS FROM QR ===== */
+
+const allowedTables = [
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+];
+
+const urlParams =
+  new URLSearchParams(window.location.search);
+
+const rawTableParam =
+  urlParams.get("table");
+
+function normalizeTableNumber(value) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmedValue =
+    String(value).trim();
+
+  if (!/^\d+$/.test(trimmedValue)) {
+    return null;
+  }
+
+  return trimmedValue.padStart(2, "0");
+}
+
+const normalizedTableNumber =
+  normalizeTableNumber(rawTableParam);
+
+const tableNumber =
+  allowedTables.includes(normalizedTableNumber)
+    ? normalizedTableNumber
+    : null;
+
+/* ===== APPLICATION STATE ===== */
 
 let selectedCategory = "Tất cả";
 let cart = [];
 let isSubmittingOrder = false;
 
-/* ===== LẤY CÁC PHẦN TỬ HTML ===== */
+/* ===== DOM ELEMENTS ===== */
 
-const menuList = document.querySelector("#menu-list");
-const menuCount = document.querySelector("#menu-count");
-const searchInput = document.querySelector("#search-input");
-const categoryList = document.querySelector("#category-list");
+const qrRequiredScreen =
+  document.querySelector(
+    "#qr-required-screen"
+  );
 
-const cartButton = document.querySelector("#cart-button");
-const cartCount = document.querySelector("#cart-count");
-const cartPanel = document.querySelector("#cart-panel");
-const closeCartButton = document.querySelector("#close-cart");
-const overlay = document.querySelector("#overlay");
+const appContent =
+  document.querySelector(
+    "#app-content"
+  );
 
-const cartItems = document.querySelector("#cart-items");
-const cartTotal = document.querySelector("#cart-total");
-const submitOrderButton = document.querySelector("#submit-order");
+const tableLabel =
+  document.querySelector(
+    "#table-label"
+  );
 
-const toast = document.querySelector("#toast");
+const cartTableLabel =
+  document.querySelector(
+    "#cart-table-label"
+  );
 
-/* ===== HÀM HỖ TRỢ ===== */
+const menuList =
+  document.querySelector(
+    "#menu-list"
+  );
+
+const menuCount =
+  document.querySelector(
+    "#menu-count"
+  );
+
+const searchInput =
+  document.querySelector(
+    "#search-input"
+  );
+
+const categoryList =
+  document.querySelector(
+    "#category-list"
+  );
+
+const cartButton =
+  document.querySelector(
+    "#cart-button"
+  );
+
+const cartCount =
+  document.querySelector(
+    "#cart-count"
+  );
+
+const cartPanel =
+  document.querySelector(
+    "#cart-panel"
+  );
+
+const closeCartButton =
+  document.querySelector(
+    "#close-cart"
+  );
+
+const overlay =
+  document.querySelector(
+    "#overlay"
+  );
+
+const cartItems =
+  document.querySelector(
+    "#cart-items"
+  );
+
+const cartTotal =
+  document.querySelector(
+    "#cart-total"
+  );
+
+const submitOrderButton =
+  document.querySelector(
+    "#submit-order"
+  );
+
+const toast =
+  document.querySelector(
+    "#toast"
+  );
+
+/* ===== ACCESS CONTROL ===== */
+
+function validateTableAccess() {
+  if (!tableNumber) {
+    qrRequiredScreen.classList.add(
+      "visible"
+    );
+
+    appContent.classList.add(
+      "hidden"
+    );
+
+    return false;
+  }
+
+  qrRequiredScreen.classList.remove(
+    "visible"
+  );
+
+  appContent.classList.remove(
+    "hidden"
+  );
+
+  return true;
+}
+
+function updateTableLabels() {
+  const label =
+    `Bàn số ${tableNumber}`;
+
+  tableLabel.textContent = label;
+  cartTableLabel.textContent = label;
+}
+
+/* ===== HELPER FUNCTIONS ===== */
 
 function formatCurrency(value) {
-  const formattedValue = new Intl.NumberFormat("vi-VN").format(
-    Number(value) || 0
-  );
+  const formattedValue =
+    new Intl.NumberFormat("vi-VN").format(
+      Number(value) || 0
+    );
 
   return `${formattedValue} VND`;
 }
 
 function showToast(message) {
-  if (!toast) {
-    return;
-  }
-
   toast.textContent = message;
-  toast.classList.add("visible");
+
+  toast.classList.add(
+    "visible"
+  );
 
   window.setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 2000);
+    toast.classList.remove(
+      "visible"
+    );
+  }, 2200);
 }
 
-/* ===== DANH MỤC ===== */
+/* ===== CATEGORY FUNCTIONS ===== */
 
 function getCategories() {
-  const categories = menuItems.map((item) => item.category);
-
-  return ["Tất cả", ...new Set(categories)];
+  return [
+    "Tất cả",
+    ...new Set(
+      menuItems.map(
+        (item) => item.category
+      )
+    ),
+  ];
 }
 
 function renderCategories() {
-  if (!categoryList) {
-    return;
-  }
-
-  categoryList.innerHTML = getCategories()
-    .map(
-      (category) => `
-        <button
-          type="button"
-          class="category-button ${
-            category === selectedCategory ? "active" : ""
-          }"
-          data-category="${category}"
-        >
-          ${category}
-        </button>
-      `
-    )
-    .join("");
+  categoryList.innerHTML =
+    getCategories()
+      .map(
+        (category) => `
+          <button
+            type="button"
+            class="category-button ${
+              category === selectedCategory
+                ? "active"
+                : ""
+            }"
+            data-category="${category}"
+          >
+            ${category}
+          </button>
+        `
+      )
+      .join("");
 }
 
-/* ===== THỰC ĐƠN ===== */
+/* ===== MENU FUNCTIONS ===== */
 
 function getFilteredMenu() {
-  const keyword = searchInput
-    ? searchInput.value.trim().toLowerCase()
-    : "";
+  const keyword =
+    searchInput.value
+      .trim()
+      .toLowerCase();
 
-  return menuItems.filter((item) => {
-    const matchesCategory =
-      selectedCategory === "Tất cả" ||
-      item.category === selectedCategory;
+  return menuItems.filter(
+    (item) => {
+      const matchesCategory =
+        selectedCategory === "Tất cả" ||
+        item.category ===
+          selectedCategory;
 
-    const matchesSearch =
-      item.name.toLowerCase().includes(keyword) ||
-      item.description.toLowerCase().includes(keyword);
+      const matchesSearch =
+        item.name
+          .toLowerCase()
+          .includes(keyword) ||
+        item.description
+          .toLowerCase()
+          .includes(keyword);
 
-    return matchesCategory && matchesSearch;
-  });
+      return (
+        matchesCategory &&
+        matchesSearch
+      );
+    }
+  );
 }
 
 function renderMenu() {
-  if (!menuList || !menuCount) {
-    return;
-  }
+  const filteredItems =
+    getFilteredMenu();
 
-  const filteredItems = getFilteredMenu();
+  menuCount.textContent =
+    `${filteredItems.length} món`;
 
-  menuCount.textContent = `${filteredItems.length} món`;
-
-  if (filteredItems.length === 0) {
+  if (
+    filteredItems.length === 0
+  ) {
     menuList.innerHTML = `
       <p class="empty-cart">
         Không tìm thấy món phù hợp.
@@ -228,55 +398,70 @@ function renderMenu() {
     return;
   }
 
-  menuList.innerHTML = filteredItems
-    .map(
-      (item) => `
-        <article class="menu-card">
-          <img
-            src="${item.image}"
-            alt="${item.name}"
-            loading="lazy"
-          />
+  menuList.innerHTML =
+    filteredItems
+      .map(
+        (item) => `
+          <article class="menu-card">
+            <img
+              src="${item.image}"
+              alt="${item.name}"
+              loading="lazy"
+            />
 
-          <div class="menu-content">
-            <p class="eyebrow">${item.category}</p>
+            <div class="menu-content">
+              <p class="eyebrow">
+                ${item.category}
+              </p>
 
-            <h3>${item.name}</h3>
+              <h3>
+                ${item.name}
+              </h3>
 
-            <p class="menu-description">
-              ${item.description}
-            </p>
+              <p class="menu-description">
+                ${item.description}
+              </p>
 
-            <div class="menu-footer">
-              <span class="price">
-                ${formatCurrency(item.price)}
-              </span>
+              <div class="menu-footer">
+                <span class="price">
+                  ${formatCurrency(
+                    item.price
+                  )}
+                </span>
 
-              <button
-                type="button"
-                class="add-button"
-                data-add-item="${item.id}"
-              >
-                Thêm món
-              </button>
+                <button
+                  type="button"
+                  class="add-button"
+                  data-add-item="${item.id}"
+                >
+                  Thêm món
+                </button>
+              </div>
             </div>
-          </div>
-        </article>
-      `
-    )
-    .join("");
+          </article>
+        `
+      )
+      .join("");
 }
 
-/* ===== GIỎ HÀNG ===== */
+/* ===== CART FUNCTIONS ===== */
 
 function addToCart(itemId) {
-  const menuItem = menuItems.find((item) => item.id === itemId);
+  const menuItem =
+    menuItems.find(
+      (item) =>
+        item.id === itemId
+    );
 
   if (!menuItem) {
     return;
   }
 
-  const existingItem = cart.find((item) => item.id === itemId);
+  const existingItem =
+    cart.find(
+      (item) =>
+        item.id === itemId
+    );
 
   if (existingItem) {
     existingItem.quantity += 1;
@@ -288,20 +473,35 @@ function addToCart(itemId) {
   }
 
   renderCart();
-  showToast(`Đã thêm ${menuItem.name} vào giỏ`);
+
+  showToast(
+    `Đã thêm ${menuItem.name} vào giỏ`
+  );
 }
 
-function updateQuantity(itemId, change) {
-  const item = cart.find((cartItem) => cartItem.id === itemId);
+function updateQuantity(
+  itemId,
+  change
+) {
+  const cartItem =
+    cart.find(
+      (item) =>
+        item.id === itemId
+    );
 
-  if (!item) {
+  if (!cartItem) {
     return;
   }
 
-  item.quantity += change;
+  cartItem.quantity += change;
 
-  if (item.quantity <= 0) {
-    cart = cart.filter((cartItem) => cartItem.id !== itemId);
+  if (
+    cartItem.quantity <= 0
+  ) {
+    cart = cart.filter(
+      (item) =>
+        item.id !== itemId
+    );
   }
 
   renderCart();
@@ -309,31 +509,30 @@ function updateQuantity(itemId, change) {
 
 function getCartQuantity() {
   return cart.reduce(
-    (totalQuantity, item) => totalQuantity + item.quantity,
+    (total, item) =>
+      total + item.quantity,
     0
   );
 }
 
 function getCartTotal() {
   return cart.reduce(
-    (totalPrice, item) =>
-      totalPrice + item.price * item.quantity,
+    (total, item) =>
+      total +
+      item.price *
+        item.quantity,
     0
   );
 }
 
 function renderCart() {
-  if (
-    !cartCount ||
-    !cartTotal ||
-    !cartItems ||
-    !submitOrderButton
-  ) {
-    return;
-  }
+  cartCount.textContent =
+    getCartQuantity();
 
-  cartCount.textContent = getCartQuantity();
-  cartTotal.textContent = formatCurrency(getCartTotal());
+  cartTotal.textContent =
+    formatCurrency(
+      getCartTotal()
+    );
 
   if (cart.length === 0) {
     cartItems.innerHTML = `
@@ -342,115 +541,153 @@ function renderCart() {
       </p>
     `;
 
-    submitOrderButton.disabled = true;
+    submitOrderButton.disabled =
+      true;
+
     return;
   }
 
-  submitOrderButton.disabled = isSubmittingOrder;
+  submitOrderButton.disabled =
+    isSubmittingOrder;
 
-  cartItems.innerHTML = cart
-    .map(
-      (item) => `
-        <div class="cart-item">
-          <div>
-            <h4>${item.name}</h4>
+  cartItems.innerHTML =
+    cart
+      .map(
+        (item) => `
+          <div class="cart-item">
+            <div>
+              <h4>
+                ${item.name}
+              </h4>
 
-            <p>
-              ${formatCurrency(item.price * item.quantity)}
-            </p>
+              <p>
+                ${formatCurrency(
+                  item.price *
+                    item.quantity
+                )}
+              </p>
+            </div>
+
+            <div class="quantity-controls">
+              <button
+                type="button"
+                data-change="-1"
+                data-item-id="${item.id}"
+                aria-label="Giảm số lượng ${item.name}"
+              >
+                −
+              </button>
+
+              <span>
+                ${item.quantity}
+              </span>
+
+              <button
+                type="button"
+                data-change="1"
+                data-item-id="${item.id}"
+                aria-label="Tăng số lượng ${item.name}"
+              >
+                +
+              </button>
+            </div>
           </div>
-
-          <div class="quantity-controls">
-            <button
-              type="button"
-              data-change="-1"
-              data-item-id="${item.id}"
-              aria-label="Giảm số lượng ${item.name}"
-            >
-              −
-            </button>
-
-            <span>${item.quantity}</span>
-
-            <button
-              type="button"
-              data-change="1"
-              data-item-id="${item.id}"
-              aria-label="Tăng số lượng ${item.name}"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      `
-    )
-    .join("");
+        `
+      )
+      .join("");
 }
 
 function openCart() {
-  if (!cartPanel || !overlay) {
-    return;
-  }
+  cartPanel.classList.add(
+    "open"
+  );
 
-  cartPanel.classList.add("open");
-  overlay.classList.add("visible");
+  overlay.classList.add(
+    "visible"
+  );
 }
 
 function closeCart() {
-  if (!cartPanel || !overlay) {
+  cartPanel.classList.remove(
+    "open"
+  );
+
+  overlay.classList.remove(
+    "visible"
+  );
+}
+
+/* ===== SUBMIT ORDER ===== */
+
+async function submitOrder() {
+  if (!tableNumber) {
     return;
   }
 
-  cartPanel.classList.remove("open");
-  overlay.classList.remove("visible");
-}
-
-/* ===== GỬI ĐƠN LÊN AWS ===== */
-
-async function submitOrder() {
   if (
     cart.length === 0 ||
-    isSubmittingOrder ||
-    !submitOrderButton
+    isSubmittingOrder
   ) {
     return;
   }
 
   const order = {
-    orderId: `ORD-${Date.now()}`,
-    tableNumber: "05",
-    items: cart.map((item) => ({
-      itemId: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-    })),
-    totalAmount: getCartTotal(),
+    orderId:
+      `ORD-${Date.now()}`,
+
+    tableNumber,
+
+    items: cart.map(
+      (item) => ({
+        itemId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+      })
+    ),
+
+    totalAmount:
+      getCartTotal(),
+
     status: "PENDING",
-    createdAt: new Date().toISOString(),
+
+    createdAt:
+      new Date().toISOString(),
   };
 
   isSubmittingOrder = true;
-  submitOrderButton.disabled = true;
-  submitOrderButton.textContent = "Đang gửi đơn...";
+
+  submitOrderButton.disabled =
+    true;
+
+  submitOrderButton.textContent =
+    "Đang gửi đơn...";
 
   try {
-    const response = await fetch(
-      "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com/order",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(order),
-      }
-    );
+    const response =
+      await fetch(
+        `${API_URL}/order`,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+
+            Accept:
+              "application/json",
+          },
+
+          body:
+            JSON.stringify(order),
+        }
+      );
 
     let result = {};
 
     try {
-      result = await response.json();
+      result =
+        await response.json();
     } catch (parseError) {
       result = {};
     }
@@ -458,75 +695,91 @@ async function submitOrder() {
     if (!response.ok) {
       throw new Error(
         result.message ||
-          `Không thể gửi đơn. Mã lỗi: ${response.status}`
+          `Máy chủ trả về lỗi ${response.status}`
       );
     }
 
-    /*
-      Giữ một bản đơn hàng trong localStorage
-      để order.html có thể hiển thị ngay.
-    */
     localStorage.setItem(
       "cloudmenu-order",
       JSON.stringify(order)
     );
 
     cart = [];
+
     renderCart();
     closeCart();
 
-    window.location.href = "order.html";
+    window.location.href =
+      `order.html?table=${encodeURIComponent(
+        tableNumber
+      )}`;
   } catch (error) {
-    console.error("SUBMIT ORDER ERROR:", error);
+    console.error(
+      "SUBMIT ORDER ERROR:",
+      error
+    );
 
     showToast(
-      error.message || "Không thể gửi đơn hàng"
+      error.message ||
+        "Không thể gửi đơn hàng"
     );
   } finally {
     isSubmittingOrder = false;
 
-    submitOrderButton.textContent = "Gửi đơn gọi món";
+    submitOrderButton.textContent =
+      "Gửi đơn gọi món";
 
     renderCart();
   }
 }
 
-/* ===== SỰ KIỆN DANH MỤC ===== */
+/* ===== EVENT LISTENERS ===== */
 
-if (categoryList) {
-  categoryList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-category]");
+categoryList.addEventListener(
+  "click",
+  (event) => {
+    const button =
+      event.target.closest(
+        "[data-category]"
+      );
 
     if (!button) {
       return;
     }
 
-    selectedCategory = button.dataset.category;
+    selectedCategory =
+      button.dataset.category;
 
     renderCategories();
     renderMenu();
-  });
-}
+  }
+);
 
-/* ===== SỰ KIỆN THÊM MÓN ===== */
-
-if (menuList) {
-  menuList.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-add-item]");
+menuList.addEventListener(
+  "click",
+  (event) => {
+    const button =
+      event.target.closest(
+        "[data-add-item]"
+      );
 
     if (!button) {
       return;
     }
 
-    addToCart(button.dataset.addItem);
-  });
-}
+    addToCart(
+      button.dataset.addItem
+    );
+  }
+);
 
-/* ===== SỰ KIỆN THAY ĐỔI SỐ LƯỢNG ===== */
-
-if (cartItems) {
-  cartItems.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-change]");
+cartItems.addEventListener(
+  "click",
+  (event) => {
+    const button =
+      event.target.closest(
+        "[data-change]"
+      );
 
     if (!button) {
       return;
@@ -534,41 +787,55 @@ if (cartItems) {
 
     updateQuantity(
       button.dataset.itemId,
-      Number(button.dataset.change)
+      Number(
+        button.dataset.change
+      )
     );
-  });
-}
-
-/* ===== CÁC SỰ KIỆN KHÁC ===== */
-
-if (searchInput) {
-  searchInput.addEventListener("input", renderMenu);
-}
-
-if (cartButton) {
-  cartButton.addEventListener("click", openCart);
-}
-
-if (closeCartButton) {
-  closeCartButton.addEventListener("click", closeCart);
-}
-
-if (overlay) {
-  overlay.addEventListener("click", closeCart);
-}
-
-if (submitOrderButton) {
-  submitOrderButton.addEventListener("click", submitOrder);
-}
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    closeCart();
   }
-});
+);
 
-/* ===== KHỞI TẠO GIAO DIỆN ===== */
+searchInput.addEventListener(
+  "input",
+  renderMenu
+);
 
-renderCategories();
-renderMenu();
-renderCart();
+cartButton.addEventListener(
+  "click",
+  openCart
+);
+
+closeCartButton.addEventListener(
+  "click",
+  closeCart
+);
+
+overlay.addEventListener(
+  "click",
+  closeCart
+);
+
+submitOrderButton.addEventListener(
+  "click",
+  submitOrder
+);
+
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (event.key === "Escape") {
+      closeCart();
+    }
+  }
+);
+
+/* ===== INITIALIZATION ===== */
+
+const hasValidTable =
+  validateTableAccess();
+
+if (hasValidTable) {
+  updateTableLabels();
+  renderCategories();
+  renderMenu();
+  renderCart();
+}
