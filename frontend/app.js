@@ -5,17 +5,16 @@ const menuItems = [
     category: "Món chính",
     price: 289000,
     description: "Vị chua cay, dùng kèm tôm, mực và rau tươi.",
-    image:
-      "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=80",
+    image: "images/Lauthaihaisan.png",
   },
   {
     id: "food-002",
     name: "Bò Cuộn Nấm",
     category: "Món chính",
     price: 99000,
-    description: "Thịt bò mềm cuộn nấm kim châm, dùng kèm sốt đặc biệt.",
-    image:
-      "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=80",
+    description:
+      "Thịt bò mềm cuộn nấm kim châm, dùng kèm sốt đặc biệt.",
+    image: "images/bocuonnam.jpg",
   },
   {
     id: "food-003",
@@ -23,8 +22,25 @@ const menuItems = [
     category: "Món chính",
     price: 79000,
     description: "Cơm chiên cùng tôm, mực, trứng và rau củ.",
-    image:
-      "https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=900&q=80",
+    image: "images/comchienhaisan.jpg",
+  },
+  {
+    id: "food-004",
+    name: "Cơm Tấm",
+    category: "Món chính",
+    price: 45000,
+    description:
+      "Cơm tấm sườn nướng ăn kèm bì, chả và đồ chua.",
+    image: "images/comtam.jpg",
+  },
+  {
+    id: "food-005",
+    name: "Bún Bò Huế",
+    category: "Món chính",
+    price: 50000,
+    description:
+      "Bún bò Huế đậm đà với thịt bò, chả và nước dùng cay nhẹ.",
+    image: "images/bunboHue.jpg",
   },
   {
     id: "drink-001",
@@ -32,8 +48,7 @@ const menuItems = [
     category: "Đồ uống",
     price: 39000,
     description: "Trà đào thanh mát, dùng kèm lát đào ngâm.",
-    image:
-      "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=900&q=80",
+    image: "images/tradao.jpg",
   },
   {
     id: "drink-002",
@@ -41,8 +56,23 @@ const menuItems = [
     category: "Đồ uống",
     price: 45000,
     description: "Nước cam tươi, vị chua ngọt tự nhiên.",
-    image:
-      "https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=900&q=80",
+    image: "images/nuoccam.jpg",
+  },
+  {
+    id: "drink-003",
+    name: "Nước Lọc",
+    category: "Đồ uống",
+    price: 10000,
+    description: "Nước suối tinh khiết, phục vụ mát lạnh.",
+    image: "images/nuocloc.jpg",
+  },
+  {
+    id: "drink-004",
+    name: "Trà Đá",
+    category: "Đồ uống",
+    price: 3000,
+    description: "Trà đá thanh mát, dùng kèm theo bữa ăn.",
+    image: "images/trada.jpg",
   },
   {
     id: "dessert-001",
@@ -50,44 +80,103 @@ const menuItems = [
     category: "Tráng miệng",
     price: 49000,
     description: "Panna cotta mềm mịn, dùng cùng sốt dâu.",
-    image:
-      "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=900&q=80",
+    image: "images/pannacotta.jpg",
+  },
+  {
+    id: "dessert-002",
+    name: "Kem Xoài Sữa Chua",
+    category: "Tráng miệng",
+    price: 25000,
+    description:
+      "Kem xoài kết hợp sữa chua mát lạnh, thơm béo và thanh vị.",
+    image: "images/kemxoaisuachua.jpg",
+  },
+  {
+    id: "dessert-003",
+    name: "Thạch Rau Câu",
+    category: "Tráng miệng",
+    price: 20000,
+    description:
+      "Thạch rau câu giòn mát, nhiều màu sắc hấp dẫn.",
+    image: "images/thachraucau.jpg",
+  },
+  {
+    id: "dessert-004",
+    name: "Bánh Flan",
+    category: "Tráng miệng",
+    price: 15000,
+    description:
+      "Bánh flan mềm mịn, thơm vị trứng sữa và caramel.",
+    image: "images/banhflan.jpg",
   },
 ];
 
+/* ===== TRẠNG THÁI ỨNG DỤNG ===== */
+
 let selectedCategory = "Tất cả";
 let cart = [];
+let isSubmittingOrder = false;
+
+/* ===== LẤY CÁC PHẦN TỬ HTML ===== */
 
 const menuList = document.querySelector("#menu-list");
 const menuCount = document.querySelector("#menu-count");
 const searchInput = document.querySelector("#search-input");
 const categoryList = document.querySelector("#category-list");
+
 const cartButton = document.querySelector("#cart-button");
 const cartCount = document.querySelector("#cart-count");
 const cartPanel = document.querySelector("#cart-panel");
 const closeCartButton = document.querySelector("#close-cart");
 const overlay = document.querySelector("#overlay");
+
 const cartItems = document.querySelector("#cart-items");
 const cartTotal = document.querySelector("#cart-total");
 const submitOrderButton = document.querySelector("#submit-order");
+
 const toast = document.querySelector("#toast");
 
+/* ===== HÀM HỖ TRỢ ===== */
+
 function formatCurrency(value) {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(value);
+  const formattedValue = new Intl.NumberFormat("vi-VN").format(
+    Number(value) || 0
+  );
+
+  return `${formattedValue} VND`;
 }
 
+function showToast(message) {
+  if (!toast) {
+    return;
+  }
+
+  toast.textContent = message;
+  toast.classList.add("visible");
+
+  window.setTimeout(() => {
+    toast.classList.remove("visible");
+  }, 2000);
+}
+
+/* ===== DANH MỤC ===== */
+
 function getCategories() {
-  return ["Tất cả", ...new Set(menuItems.map((item) => item.category))];
+  const categories = menuItems.map((item) => item.category);
+
+  return ["Tất cả", ...new Set(categories)];
 }
 
 function renderCategories() {
+  if (!categoryList) {
+    return;
+  }
+
   categoryList.innerHTML = getCategories()
     .map(
       (category) => `
         <button
+          type="button"
           class="category-button ${
             category === selectedCategory ? "active" : ""
           }"
@@ -100,8 +189,12 @@ function renderCategories() {
     .join("");
 }
 
+/* ===== THỰC ĐƠN ===== */
+
 function getFilteredMenu() {
-  const keyword = searchInput.value.trim().toLowerCase();
+  const keyword = searchInput
+    ? searchInput.value.trim().toLowerCase()
+    : "";
 
   return menuItems.filter((item) => {
     const matchesCategory =
@@ -117,25 +210,50 @@ function getFilteredMenu() {
 }
 
 function renderMenu() {
+  if (!menuList || !menuCount) {
+    return;
+  }
+
   const filteredItems = getFilteredMenu();
 
   menuCount.textContent = `${filteredItems.length} món`;
+
+  if (filteredItems.length === 0) {
+    menuList.innerHTML = `
+      <p class="empty-cart">
+        Không tìm thấy món phù hợp.
+      </p>
+    `;
+
+    return;
+  }
 
   menuList.innerHTML = filteredItems
     .map(
       (item) => `
         <article class="menu-card">
-          <img src="${item.image}" alt="${item.name}" />
+          <img
+            src="${item.image}"
+            alt="${item.name}"
+            loading="lazy"
+          />
 
           <div class="menu-content">
             <p class="eyebrow">${item.category}</p>
+
             <h3>${item.name}</h3>
-            <p class="menu-description">${item.description}</p>
+
+            <p class="menu-description">
+              ${item.description}
+            </p>
 
             <div class="menu-footer">
-              <span class="price">${formatCurrency(item.price)}</span>
+              <span class="price">
+                ${formatCurrency(item.price)}
+              </span>
 
               <button
+                type="button"
                 class="add-button"
                 data-add-item="${item.id}"
               >
@@ -147,21 +265,22 @@ function renderMenu() {
       `
     )
     .join("");
-
-  if (filteredItems.length === 0) {
-    menuList.innerHTML =
-      '<p class="empty-cart">Không tìm thấy món phù hợp.</p>';
-  }
 }
 
+/* ===== GIỎ HÀNG ===== */
+
 function addToCart(itemId) {
+  const menuItem = menuItems.find((item) => item.id === itemId);
+
+  if (!menuItem) {
+    return;
+  }
+
   const existingItem = cart.find((item) => item.id === itemId);
 
   if (existingItem) {
     existingItem.quantity += 1;
   } else {
-    const menuItem = menuItems.find((item) => item.id === itemId);
-
     cart.push({
       ...menuItem,
       quantity: 1,
@@ -169,7 +288,7 @@ function addToCart(itemId) {
   }
 
   renderCart();
-  showToast("Đã thêm món vào giỏ");
+  showToast(`Đã thêm ${menuItem.name} vào giỏ`);
 }
 
 function updateQuantity(itemId, change) {
@@ -189,28 +308,45 @@ function updateQuantity(itemId, change) {
 }
 
 function getCartQuantity() {
-  return cart.reduce((total, item) => total + item.quantity, 0);
+  return cart.reduce(
+    (totalQuantity, item) => totalQuantity + item.quantity,
+    0
+  );
 }
 
 function getCartTotal() {
   return cart.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (totalPrice, item) =>
+      totalPrice + item.price * item.quantity,
     0
   );
 }
 
 function renderCart() {
+  if (
+    !cartCount ||
+    !cartTotal ||
+    !cartItems ||
+    !submitOrderButton
+  ) {
+    return;
+  }
+
   cartCount.textContent = getCartQuantity();
   cartTotal.textContent = formatCurrency(getCartTotal());
 
   if (cart.length === 0) {
-    cartItems.innerHTML =
-      '<p class="empty-cart">Giỏ hàng đang trống.</p>';
+    cartItems.innerHTML = `
+      <p class="empty-cart">
+        Giỏ hàng đang trống.
+      </p>
+    `;
+
     submitOrderButton.disabled = true;
     return;
   }
 
-  submitOrderButton.disabled = false;
+  submitOrderButton.disabled = isSubmittingOrder;
 
   cartItems.innerHTML = cart
     .map(
@@ -218,13 +354,32 @@ function renderCart() {
         <div class="cart-item">
           <div>
             <h4>${item.name}</h4>
-            <p>${formatCurrency(item.price * item.quantity)}</p>
+
+            <p>
+              ${formatCurrency(item.price * item.quantity)}
+            </p>
           </div>
 
           <div class="quantity-controls">
-            <button data-change="-1" data-item-id="${item.id}">−</button>
+            <button
+              type="button"
+              data-change="-1"
+              data-item-id="${item.id}"
+              aria-label="Giảm số lượng ${item.name}"
+            >
+              −
+            </button>
+
             <span>${item.quantity}</span>
-            <button data-change="1" data-item-id="${item.id}">+</button>
+
+            <button
+              type="button"
+              data-change="1"
+              data-item-id="${item.id}"
+              aria-label="Tăng số lượng ${item.name}"
+            >
+              +
+            </button>
           </div>
         </div>
       `
@@ -233,17 +388,31 @@ function renderCart() {
 }
 
 function openCart() {
+  if (!cartPanel || !overlay) {
+    return;
+  }
+
   cartPanel.classList.add("open");
   overlay.classList.add("visible");
 }
 
 function closeCart() {
+  if (!cartPanel || !overlay) {
+    return;
+  }
+
   cartPanel.classList.remove("open");
   overlay.classList.remove("visible");
 }
 
+/* ===== GỬI ĐƠN LÊN AWS ===== */
+
 async function submitOrder() {
-  if (cart.length === 0) {
+  if (
+    cart.length === 0 ||
+    isSubmittingOrder ||
+    !submitOrderButton
+  ) {
     return;
   }
 
@@ -261,6 +430,10 @@ async function submitOrder() {
     createdAt: new Date().toISOString(),
   };
 
+  isSubmittingOrder = true;
+  submitOrderButton.disabled = true;
+  submitOrderButton.textContent = "Đang gửi đơn...";
+
   try {
     const response = await fetch(
       "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com/order",
@@ -268,19 +441,31 @@ async function submitOrder() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(order),
       }
     );
 
-    const result = await response.json();
-    console.log("API Response:", result);
+    let result = {};
 
-    if (!response.ok) {
-      throw new Error(result.message || "Đặt món thất bại");
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      result = {};
     }
 
-    // Vẫn lưu local để order.html hiển thị
+    if (!response.ok) {
+      throw new Error(
+        result.message ||
+          `Không thể gửi đơn. Mã lỗi: ${response.status}`
+      );
+    }
+
+    /*
+      Giữ một bản đơn hàng trong localStorage
+      để order.html có thể hiển thị ngay.
+    */
     localStorage.setItem(
       "cloudmenu-order",
       JSON.stringify(order)
@@ -291,61 +476,98 @@ async function submitOrder() {
     closeCart();
 
     window.location.href = "order.html";
-
   } catch (error) {
-    console.error(error);
-    alert("Không thể gửi đơn hàng!");
+    console.error("SUBMIT ORDER ERROR:", error);
+
+    showToast(
+      error.message || "Không thể gửi đơn hàng"
+    );
+  } finally {
+    isSubmittingOrder = false;
+
+    submitOrderButton.textContent = "Gửi đơn gọi món";
+
+    renderCart();
   }
 }
-function showToast(message) {
-  toast.textContent = message;
-  toast.classList.add("visible");
 
-  window.setTimeout(() => {
-    toast.classList.remove("visible");
-  }, 2000);
+/* ===== SỰ KIỆN DANH MỤC ===== */
+
+if (categoryList) {
+  categoryList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-category]");
+
+    if (!button) {
+      return;
+    }
+
+    selectedCategory = button.dataset.category;
+
+    renderCategories();
+    renderMenu();
+  });
 }
 
-categoryList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-category]");
+/* ===== SỰ KIỆN THÊM MÓN ===== */
 
-  if (!button) {
-    return;
+if (menuList) {
+  menuList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-add-item]");
+
+    if (!button) {
+      return;
+    }
+
+    addToCart(button.dataset.addItem);
+  });
+}
+
+/* ===== SỰ KIỆN THAY ĐỔI SỐ LƯỢNG ===== */
+
+if (cartItems) {
+  cartItems.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-change]");
+
+    if (!button) {
+      return;
+    }
+
+    updateQuantity(
+      button.dataset.itemId,
+      Number(button.dataset.change)
+    );
+  });
+}
+
+/* ===== CÁC SỰ KIỆN KHÁC ===== */
+
+if (searchInput) {
+  searchInput.addEventListener("input", renderMenu);
+}
+
+if (cartButton) {
+  cartButton.addEventListener("click", openCart);
+}
+
+if (closeCartButton) {
+  closeCartButton.addEventListener("click", closeCart);
+}
+
+if (overlay) {
+  overlay.addEventListener("click", closeCart);
+}
+
+if (submitOrderButton) {
+  submitOrderButton.addEventListener("click", submitOrder);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeCart();
   }
-
-  selectedCategory = button.dataset.category;
-  renderCategories();
-  renderMenu();
 });
 
-menuList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-add-item]");
-
-  if (!button) {
-    return;
-  }
-
-  addToCart(button.dataset.addItem);
-});
-
-cartItems.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-change]");
-
-  if (!button) {
-    return;
-  }
-
-  updateQuantity(
-    button.dataset.itemId,
-    Number(button.dataset.change)
-  );
-});
-
-searchInput.addEventListener("input", renderMenu);
-cartButton.addEventListener("click", openCart);
-closeCartButton.addEventListener("click", closeCart);
-overlay.addEventListener("click", closeCart);
-submitOrderButton.addEventListener("click", submitOrder);
+/* ===== KHỞI TẠO GIAO DIỆN ===== */
 
 renderCategories();
 renderMenu();
