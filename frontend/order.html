@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trạng thái đơn - CloudMenu</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div>
+      <p class="eyebrow">Bàn số 05</p>
+      <h1>Trạng thái đơn</h1>
+      <p class="subtitle">Theo dõi tiến trình chuẩn bị món</p>
+    </div>
+
+    <a href="index.html" class="cart-button">
+      Quay lại menu
+    </a>
+  </header>
+
+  <main class="container">
+    <section class="order-status-card">
+
+      <div class="order-top-row">
+        <div>
+          <p class="eyebrow">Mã đơn</p>
+          <h2 id="order-id">Chưa có đơn</h2>
+        </div>
+
+        <span id="order-status-badge" class="order-status-badge">
+          Đã gửi đơn
+        </span>
+      </div>
+
+      <div class="status-timeline">
+        <div class="status-step active">
+          <span>1</span>
+
+          <div>
+            <strong>Đã gửi đơn</strong>
+            <p>Nhà hàng đã nhận đơn gọi món.</p>
+          </div>
+        </div>
+
+        <div class="status-step">
+          <span>2</span>
+
+          <div>
+            <strong>Đang chế biến</strong>
+            <p>Bếp đang chuẩn bị món ăn.</p>
+          </div>
+        </div>
+
+        <div class="status-step">
+          <span>3</span>
+
+          <div>
+            <strong>Đã hoàn thành</strong>
+            <p>Món ăn đã sẵn sàng để phục vụ.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="order-summary" class="order-summary"></div>
+
+    </section>
+  </main>
+
+  <script>
+    const order = JSON.parse(
+      localStorage.getItem("cloudmenu-order")
+    );
+
+    const orderIdElement = document.querySelector("#order-id");
+    const orderSummary = document.querySelector("#order-summary");
+    const orderStatusBadge = document.querySelector(
+      "#order-status-badge"
+    );
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(value);
+    }
+
+    function getStatusText(status) {
+      const statusMap = {
+        PENDING: "Đã gửi đơn",
+        PREPARING: "Đang chế biến",
+        COMPLETED: "Đã hoàn thành",
+      };
+
+      return statusMap[status] || "Đã gửi đơn";
+    }
+
+    function renderStatus(status) {
+      const steps = document.querySelectorAll(".status-step");
+
+      const statusIndexMap = {
+        PENDING: 0,
+        PREPARING: 1,
+        COMPLETED: 2,
+      };
+
+      const activeIndex = statusIndexMap[status] ?? 0;
+
+      steps.forEach((step, index) => {
+        step.classList.toggle(
+          "active",
+          index <= activeIndex
+        );
+      });
+
+      orderStatusBadge.textContent = getStatusText(status);
+    }
+
+    if (!order) {
+      orderIdElement.textContent = "Chưa có đơn";
+      orderStatusBadge.textContent = "Không có dữ liệu";
+
+      orderSummary.innerHTML = `
+        <p class="empty-cart">
+          Chưa có đơn gọi món nào.
+        </p>
+      `;
+    } else {
+      orderIdElement.textContent = order.orderId;
+
+      renderStatus(order.status);
+
+      orderSummary.innerHTML = `
+        <h3>Chi tiết đơn</h3>
+
+        ${order.items
+          .map(
+            (item) => `
+              <div class="summary-item">
+                <span>
+                  ${item.name} × ${item.quantity}
+                </span>
+
+                <strong>
+                  ${formatCurrency(
+                    item.price * item.quantity
+                  )}
+                </strong>
+              </div>
+            `
+          )
+          .join("")}
+
+        <div class="total-row">
+          <span>Tổng cộng</span>
+
+          <strong>
+            ${formatCurrency(order.totalAmount)}
+          </strong>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

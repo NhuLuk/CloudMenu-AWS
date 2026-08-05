@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+
+  <title>Bếp - CloudMenu</title>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div>
+      <p class="eyebrow">Khu vực bếp</p>
+      <h1>Quản lý đơn gọi món</h1>
+      <p class="subtitle">
+        Tiếp nhận và cập nhật trạng thái đơn hàng
+      </p>
+    </div>
+
+    <a href="index.html" class="cart-button">
+      Xem menu
+    </a>
+  </header>
+
+  <main class="container">
+    <section class="kitchen-page-heading">
+      <div>
+        <h2>Danh sách đơn hàng</h2>
+        <p id="order-count">Đang tải dữ liệu...</p>
+      </div>
+
+      <button
+        id="refresh-orders-button"
+        class="refresh-orders-button"
+        type="button"
+      >
+        Làm mới
+      </button>
+    </section>
+
+    <section
+      id="kitchen-orders"
+      class="kitchen-orders-grid"
+    ></section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const API_URL =
+      "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com";
+
+    const kitchenOrders = document.querySelector(
+      "#kitchen-orders"
+    );
+
+    const orderCount = document.querySelector(
+      "#order-count"
+    );
+
+    const refreshOrdersButton = document.querySelector(
+      "#refresh-orders-button"
+    );
+
+    const toast = document.querySelector("#toast");
+
+    let isLoading = false;
+    let updatingOrderId = null;
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(Number(value) || 0);
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "Không có thời gian";
+      }
+
+      const date = new Date(value);
+
+      if (Number.isNaN(date.getTime())) {
+        return "Không có thời gian";
+      }
+
+      return new Intl.DateTimeFormat("vi-VN", {
+        dateStyle: "short",
+        timeStyle: "short",
+      }).format(date);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getStatusText(status) {
+      const statusMap = {
+        PENDING: "Đã gửi đơn",
+        PREPARING: "Đang chế biến",
+        COMPLETED: "Đã hoàn thành",
+      };
+
+      return statusMap[status] || "Không xác định";
+    }
+
+    function getStatusClass(status) {
+      const statusClassMap = {
+        PENDING: "status-pending",
+        PREPARING: "status-preparing",
+        COMPLETED: "status-completed",
+      };
+
+      return statusClassMap[status] || "status-pending";
+    }
+
+    function getNextStatus(status) {
+      const nextStatusMap = {
+        PENDING: "PREPARING",
+        PREPARING: "COMPLETED",
+        COMPLETED: null,
+      };
+
+      return nextStatusMap[status] ?? null;
+    }
+
+    function getActionText(status) {
+      const actionTextMap = {
+        PENDING: "Bắt đầu chế biến",
+        PREPARING: "Đánh dấu hoàn thành",
+        COMPLETED: "Đơn đã hoàn thành",
+      };
+
+      return actionTextMap[status] || "Không thể cập nhật";
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("visible");
+
+      window.setTimeout(() => {
+        toast.classList.remove("visible");
+      }, 2200);
+    }
+
+    function showLoadingState() {
+      kitchenOrders.innerHTML = `
+        <div class="empty-kitchen-state">
+          <h2>Đang tải đơn hàng...</h2>
+          <p>Vui lòng chờ trong giây lát.</p>
+        </div>
+      `;
+    }
+
+    function showErrorState(message) {
+      kitchenOrders.innerHTML = `
+        <div class="empty-kitchen-state">
+          <h2>Không tải được đơn hàng</h2>
+          <p>${escapeHtml(message)}</p>
+
+          <button
+            id="retry-load-button"
+            class="primary-button retry-load-button"
+            type="button"
+          >
+            Thử lại
+          </button>
+        </div>
+      `;
+
+      const retryButton = document.querySelector(
+        "#retry-load-button"
+      );
+
+      retryButton?.addEventListener("click", () => {
+        loadOrders(true);
+      });
+    }
+
+    function sortOrders(orders) {
+      const statusPriority = {
+        PENDING: 1,
+        PREPARING: 2,
+        COMPLETED: 3,
+      };
+
+      return [...orders].sort((firstOrder, secondOrder) => {
+        const firstStatus =
+          statusPriority[firstOrder.status] || 99;
+
+        const secondStatus =
+          statusPriority[secondOrder.status] || 99;
+
+        if (firstStatus !== secondStatus) {
+          return firstStatus - secondStatus;
+        }
+
+        const firstTime = new Date(
+          firstOrder.createdAt || 0
+        ).getTime();
+
+        const secondTime = new Date(
+          secondOrder.createdAt || 0
+        ).getTime();
+
+        return secondTime - firstTime;
+      });
+    }
+
+    function createOrderItemsHtml(items) {
+      if (!Array.isArray(items) || items.length === 0) {
+        return `
+          <p class="empty-order-items">
+            Đơn hàng chưa có món.
+          </p>
+        `;
+      }
+
+      return items
+        .map((item) => {
+          const name = escapeHtml(
+            item.name || "Món không xác định"
+          );
+
+          const quantity = Number(item.quantity) || 0;
+          const price = Number(item.price) || 0;
+
+          return `
+            <div class="kitchen-item">
+              <div>
+                <strong>${name}</strong>
+                <p>Số lượng: ${quantity}</p>
+              </div>
+
+              <strong>
+                ${formatCurrency(price * quantity)}
+              </strong>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    function createActionButtonHtml(order) {
+      const nextStatus = getNextStatus(order.status);
+      const orderId = escapeHtml(order.orderId);
+
+      if (!nextStatus) {
+        return `
+          <button
+            class="primary-button order-action-button"
+            type="button"
+            disabled
+          >
+            ${getActionText(order.status)}
+          </button>
+        `;
+      }
+
+      const isUpdating =
+        updatingOrderId === order.orderId;
+
+      return `
+        <button
+          class="primary-button order-action-button"
+          type="button"
+          data-order-id="${orderId}"
+          data-next-status="${nextStatus}"
+          ${isUpdating ? "disabled" : ""}
+        >
+          ${
+            isUpdating
+              ? "Đang cập nhật..."
+              : getActionText(order.status)
+          }
+        </button>
+      `;
+    }
+
+    function renderOrders(orders) {
+      if (!Array.isArray(orders) || orders.length === 0) {
+        orderCount.textContent = "0 đơn hàng";
+
+        kitchenOrders.innerHTML = `
+          <div class="empty-kitchen-state">
+            <h2>Chưa có đơn mới</h2>
+            <p>Đơn khách gửi sẽ xuất hiện tại đây.</p>
+          </div>
+        `;
+
+        return;
+      }
+
+      const sortedOrders = sortOrders(orders);
+
+      orderCount.textContent =
+        `${sortedOrders.length} đơn hàng`;
+
+      kitchenOrders.innerHTML = sortedOrders
+        .map((order) => {
+          const orderId = escapeHtml(
+            order.orderId || "Không có mã đơn"
+          );
+
+          const tableNumber = escapeHtml(
+            String(order.tableNumber || "--").padStart(
+              2,
+              "0"
+            )
+          );
+
+          return `
+            <article class="kitchen-order-card">
+              <div class="kitchen-order-header">
+                <div>
+                  <p class="eyebrow">Mã đơn</p>
+
+                  <h2>${orderId}</h2>
+
+                  <p>Bàn số ${tableNumber}</p>
+
+                  <p class="order-created-time">
+                    ${formatDate(order.createdAt)}
+                  </p>
+                </div>
+
+                <span
+                  class="
+                    order-status-badge
+                    ${getStatusClass(order.status)}
+                  "
+                >
+                  ${getStatusText(order.status)}
+                </span>
+              </div>
+
+              <div class="kitchen-item-list">
+                ${createOrderItemsHtml(order.items)}
+              </div>
+
+              <div class="kitchen-total">
+                <span>Tổng đơn</span>
+
+                <strong>
+                  ${formatCurrency(order.totalAmount)}
+                </strong>
+              </div>
+
+              <div class="kitchen-order-actions">
+                ${createActionButtonHtml(order)}
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+
+      attachOrderButtonEvents();
+    }
+
+    function attachOrderButtonEvents() {
+      const actionButtons = document.querySelectorAll(
+        ".order-action-button[data-order-id]"
+      );
+
+      actionButtons.forEach((button) => {
+        button.addEventListener("click", async () => {
+          const orderId = button.dataset.orderId;
+          const nextStatus = button.dataset.nextStatus;
+
+          await updateOrderStatus(
+            orderId,
+            nextStatus
+          );
+        });
+      });
+    }
+
+    async function loadOrders(showLoading = true) {
+      if (isLoading) {
+        return;
+      }
+
+      isLoading = true;
+      refreshOrdersButton.disabled = true;
+
+      if (showLoading) {
+        showLoadingState();
+      }
+
+      try {
+        const response = await fetch(
+          `${API_URL}/orders`,
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Máy chủ trả về lỗi ${response.status}`
+          );
+        }
+
+        const data = await response.json();
+
+        const orders = Array.isArray(data)
+          ? data
+          : data.orders;
+
+        renderOrders(orders);
+      } catch (error) {
+        console.error(
+          "LOAD ORDERS ERROR:",
+          error
+        );
+
+        orderCount.textContent =
+          "Không tải được dữ liệu";
+
+        if (showLoading) {
+          showErrorState(
+            error.message || "Vui lòng thử lại sau."
+          );
+        }
+      } finally {
+        isLoading = false;
+        refreshOrdersButton.disabled = false;
+      }
+    }
+
+    async function updateOrderStatus(
+      orderId,
+      nextStatus
+    ) {
+      if (!orderId || !nextStatus) {
+        return;
+      }
+
+      if (updatingOrderId) {
+        return;
+      }
+
+      updatingOrderId = orderId;
+
+      try {
+        await loadOrders(false);
+
+        const response = await fetch(
+          `${API_URL}/orders/${encodeURIComponent(orderId)}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              status: nextStatus,
+            }),
+          }
+        );
+
+        let result = {};
+
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          result = {};
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            result.message ||
+              `Máy chủ trả về lỗi ${response.status}`
+          );
+        }
+
+        showToast(
+          nextStatus === "PREPARING"
+            ? "Đơn đã chuyển sang chế biến"
+            : "Đơn đã được hoàn thành"
+        );
+      } catch (error) {
+        console.error(
+          "UPDATE ORDER ERROR:",
+          error
+        );
+
+        showToast(
+          error.message ||
+            "Không thể cập nhật trạng thái đơn"
+        );
+      } finally {
+        updatingOrderId = null;
+        await loadOrders(false);
+      }
+    }
+
+    refreshOrdersButton.addEventListener(
+      "click",
+      async () => {
+        await loadOrders(false);
+        showToast("Đã làm mới danh sách đơn");
+      }
+    );
+
+    loadOrders(true);
+
+    window.setInterval(() => {
+      if (!updatingOrderId) {
+        loadOrders(false);
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
