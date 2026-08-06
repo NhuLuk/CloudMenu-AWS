@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0"
@@ -16,19 +17,23 @@
   <header class="header">
     <div>
       <p class="eyebrow">Khu vực bếp</p>
+
       <h1>Quản lý đơn gọi món</h1>
+
       <p class="subtitle">
         Tiếp nhận và cập nhật trạng thái đơn hàng
       </p>
     </div>
-
   </header>
 
   <main class="container">
     <section class="kitchen-page-heading">
       <div>
         <h2>Danh sách đơn hàng</h2>
-        <p id="order-count">Đang tải dữ liệu...</p>
+
+        <p id="order-count">
+          Đang tải dữ liệu...
+        </p>
       </div>
 
       <button
@@ -46,51 +51,82 @@
     ></section>
   </main>
 
-  <div id="toast" class="toast"></div>
+  <div
+    id="toast"
+    class="toast"
+  ></div>
 
   <script>
     const API_URL =
       "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com";
 
-    const kitchenOrders = document.querySelector(
-      "#kitchen-orders"
-    );
+    const kitchenOrders =
+      document.querySelector(
+        "#kitchen-orders"
+      );
 
-    const orderCount = document.querySelector(
-      "#order-count"
-    );
+    const orderCount =
+      document.querySelector(
+        "#order-count"
+      );
 
-    const refreshOrdersButton = document.querySelector(
-      "#refresh-orders-button"
-    );
+    const refreshOrdersButton =
+      document.querySelector(
+        "#refresh-orders-button"
+      );
 
-    const toast = document.querySelector("#toast");
+    const toast =
+      document.querySelector(
+        "#toast"
+      );
 
     let isLoading = false;
     let updatingOrderId = null;
+    let toastTimer = null;
+
+    /* =====================================================
+       FORMATTERS
+    ===================================================== */
 
     function formatCurrency(value) {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(Number(value) || 0);
+      const formattedValue =
+        new Intl.NumberFormat(
+          "vi-VN"
+        ).format(
+          Number(value) || 0
+        );
+
+      return `${formattedValue} VND`;
     }
 
-    function formatDate(value) {
+    function formatDateTime(value) {
       if (!value) {
-        return "Không có thời gian";
+        return null;
       }
 
-      const date = new Date(value);
+      const date =
+        new Date(value);
 
-      if (Number.isNaN(date.getTime())) {
-        return "Không có thời gian";
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return null;
       }
 
-      return new Intl.DateTimeFormat("vi-VN", {
-        dateStyle: "short",
-        timeStyle: "short",
-      }).format(date);
+      return new Intl.DateTimeFormat(
+        "vi-VN",
+        {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }
+      ).format(date);
     }
 
     function escapeHtml(value) {
@@ -102,6 +138,10 @@
         .replaceAll("'", "&#039;");
     }
 
+    /* =====================================================
+       ORDER STATUS
+    ===================================================== */
+
     function getStatusText(status) {
       const statusMap = {
         PENDING: "Đã gửi đơn",
@@ -109,7 +149,10 @@
         COMPLETED: "Đã hoàn thành",
       };
 
-      return statusMap[status] || "Không xác định";
+      return (
+        statusMap[status] ||
+        "Không xác định"
+      );
     }
 
     function getStatusClass(status) {
@@ -119,7 +162,10 @@
         COMPLETED: "status-completed",
       };
 
-      return statusClassMap[status] || "status-pending";
+      return (
+        statusClassMap[status] ||
+        "status-pending"
+      );
     }
 
     function getNextStatus(status) {
@@ -129,33 +175,67 @@
         COMPLETED: null,
       };
 
-      return nextStatusMap[status] ?? null;
+      return (
+        nextStatusMap[status] ??
+        null
+      );
     }
 
     function getActionText(status) {
       const actionTextMap = {
         PENDING: "Bắt đầu chế biến",
-        PREPARING: "Đánh dấu hoàn thành",
-        COMPLETED: "Đơn đã hoàn thành",
+        PREPARING:
+          "Đánh dấu hoàn thành",
+        COMPLETED:
+          "Đơn đã hoàn thành",
       };
 
-      return actionTextMap[status] || "Không thể cập nhật";
+      return (
+        actionTextMap[status] ||
+        "Không thể cập nhật"
+      );
     }
+
+    /* =====================================================
+       TOAST
+    ===================================================== */
 
     function showToast(message) {
-      toast.textContent = message;
-      toast.classList.add("visible");
+      if (toastTimer) {
+        window.clearTimeout(
+          toastTimer
+        );
+      }
 
-      window.setTimeout(() => {
-        toast.classList.remove("visible");
-      }, 2200);
+      toast.textContent =
+        message;
+
+      toast.classList.add(
+        "visible"
+      );
+
+      toastTimer =
+        window.setTimeout(() => {
+          toast.classList.remove(
+            "visible"
+          );
+
+          toastTimer = null;
+        }, 2200);
     }
+
+    /* =====================================================
+       LOADING AND ERROR STATES
+    ===================================================== */
 
     function showLoadingState() {
       kitchenOrders.innerHTML = `
         <div class="empty-kitchen-state">
           <h2>Đang tải đơn hàng...</h2>
-          <p>Vui lòng chờ trong giây lát.</p>
+
+          <p>
+            Vui lòng chờ trong giây lát.
+          </p>
         </div>
       `;
     }
@@ -163,12 +243,20 @@
     function showErrorState(message) {
       kitchenOrders.innerHTML = `
         <div class="empty-kitchen-state">
-          <h2>Không tải được đơn hàng</h2>
-          <p>${escapeHtml(message)}</p>
+          <h2>
+            Không tải được đơn hàng
+          </h2>
+
+          <p>
+            ${escapeHtml(message)}
+          </p>
 
           <button
             id="retry-load-button"
-            class="primary-button retry-load-button"
+            class="
+              primary-button
+              retry-load-button
+            "
             type="button"
           >
             Thử lại
@@ -176,14 +264,22 @@
         </div>
       `;
 
-      const retryButton = document.querySelector(
-        "#retry-load-button"
-      );
+      const retryButton =
+        document.querySelector(
+          "#retry-load-button"
+        );
 
-      retryButton?.addEventListener("click", () => {
-        loadOrders(true);
-      });
+      retryButton?.addEventListener(
+        "click",
+        () => {
+          loadOrders(true);
+        }
+      );
     }
+
+    /* =====================================================
+       SORTING
+    ===================================================== */
 
     function sortOrders(orders) {
       const statusPriority = {
@@ -192,31 +288,154 @@
         COMPLETED: 3,
       };
 
-      return [...orders].sort((firstOrder, secondOrder) => {
-        const firstStatus =
-          statusPriority[firstOrder.status] || 99;
+      return [...orders].sort(
+        (
+          firstOrder,
+          secondOrder
+        ) => {
+          const firstStatus =
+            statusPriority[
+              firstOrder.status
+            ] || 99;
 
-        const secondStatus =
-          statusPriority[secondOrder.status] || 99;
+          const secondStatus =
+            statusPriority[
+              secondOrder.status
+            ] || 99;
 
-        if (firstStatus !== secondStatus) {
-          return firstStatus - secondStatus;
+          if (
+            firstStatus !==
+            secondStatus
+          ) {
+            return (
+              firstStatus -
+              secondStatus
+            );
+          }
+
+          const firstTime =
+            new Date(
+              firstOrder.createdAt ||
+              0
+            ).getTime();
+
+          const secondTime =
+            new Date(
+              secondOrder.createdAt ||
+              0
+            ).getTime();
+
+          return (
+            secondTime -
+            firstTime
+          );
         }
-
-        const firstTime = new Date(
-          firstOrder.createdAt || 0
-        ).getTime();
-
-        const secondTime = new Date(
-          secondOrder.createdAt || 0
-        ).getTime();
-
-        return secondTime - firstTime;
-      });
+      );
     }
 
-    function createOrderItemsHtml(items) {
-      if (!Array.isArray(items) || items.length === 0) {
+    /* =====================================================
+       TIME DISPLAY
+    ===================================================== */
+
+    function createOrderTimeHtml(
+      order
+    ) {
+      const createdTime =
+        formatDateTime(
+          order.createdAt
+        );
+
+      const completedTime =
+        formatDateTime(
+          order.completedAt
+        );
+
+      /*
+        Không có cả hai mốc thời gian:
+        ẩn luôn dòng, không hiện
+        "Không có thời gian".
+      */
+      if (
+        !createdTime &&
+        !completedTime
+      ) {
+        return "";
+      }
+
+      /*
+        Đơn đã hoàn thành và có đủ
+        hai mốc thời gian.
+      */
+      if (
+        order.status ===
+          "COMPLETED" &&
+        createdTime &&
+        completedTime
+      ) {
+        return `
+          <p class="order-created-time">
+            <span>
+              Đặt lúc:
+              <strong>
+                ${createdTime}
+              </strong>
+            </span>
+
+            <span
+              aria-hidden="true"
+            >
+              →
+            </span>
+
+            <span>
+              Hoàn thành:
+              <strong>
+                ${completedTime}
+              </strong>
+            </span>
+          </p>
+        `;
+      }
+
+      /*
+        Trường hợp chỉ có createdAt.
+      */
+      if (createdTime) {
+        return `
+          <p class="order-created-time">
+            Đặt lúc:
+            <strong>
+              ${createdTime}
+            </strong>
+          </p>
+        `;
+      }
+
+      /*
+        Trường hợp đơn cũ chỉ có
+        completedAt.
+      */
+      return `
+        <p class="order-created-time">
+          Hoàn thành:
+          <strong>
+            ${completedTime}
+          </strong>
+        </p>
+      `;
+    }
+
+    /* =====================================================
+       ORDER ITEMS
+    ===================================================== */
+
+    function createOrderItemsHtml(
+      items
+    ) {
+      if (
+        !Array.isArray(items) ||
+        items.length === 0
+      ) {
         return `
           <p class="empty-order-items">
             Đơn hàng chưa có món.
@@ -226,22 +445,39 @@
 
       return items
         .map((item) => {
-          const name = escapeHtml(
-            item.name || "Món không xác định"
-          );
+          const name =
+            escapeHtml(
+              item.name ||
+              "Món không xác định"
+            );
 
-          const quantity = Number(item.quantity) || 0;
-          const price = Number(item.price) || 0;
+          const quantity =
+            Number(
+              item.quantity
+            ) || 0;
+
+          const price =
+            Number(
+              item.price
+            ) || 0;
 
           return `
             <div class="kitchen-item">
               <div>
-                <strong>${name}</strong>
-                <p>Số lượng: ${quantity}</p>
+                <strong>
+                  ${name}
+                </strong>
+
+                <p>
+                  Số lượng:
+                  ${quantity}
+                </p>
               </div>
 
               <strong>
-                ${formatCurrency(price * quantity)}
+                ${formatCurrency(
+                  price * quantity
+                )}
               </strong>
             </div>
           `;
@@ -249,162 +485,274 @@
         .join("");
     }
 
-    function createActionButtonHtml(order) {
-      const nextStatus = getNextStatus(order.status);
-      const orderId = escapeHtml(order.orderId);
+    /* =====================================================
+       ORDER ACTION BUTTON
+    ===================================================== */
+
+    function createActionButtonHtml(
+      order
+    ) {
+      const nextStatus =
+        getNextStatus(
+          order.status
+        );
+
+      const orderId =
+        escapeHtml(
+          order.orderId
+        );
 
       if (!nextStatus) {
         return `
           <button
-            class="primary-button order-action-button"
+            class="
+              primary-button
+              order-action-button
+            "
             type="button"
             disabled
           >
-            ${getActionText(order.status)}
+            ${getActionText(
+              order.status
+            )}
           </button>
         `;
       }
 
       const isUpdating =
-        updatingOrderId === order.orderId;
+        updatingOrderId ===
+        order.orderId;
 
       return `
         <button
-          class="primary-button order-action-button"
+          class="
+            primary-button
+            order-action-button
+          "
           type="button"
           data-order-id="${orderId}"
           data-next-status="${nextStatus}"
-          ${isUpdating ? "disabled" : ""}
+          ${isUpdating
+            ? "disabled"
+            : ""}
         >
           ${
             isUpdating
               ? "Đang cập nhật..."
-              : getActionText(order.status)
+              : getActionText(
+                  order.status
+                )
           }
         </button>
       `;
     }
 
+    /* =====================================================
+       RENDER ORDERS
+    ===================================================== */
+
     function renderOrders(orders) {
-      if (!Array.isArray(orders) || orders.length === 0) {
-        orderCount.textContent = "0 đơn hàng";
+      if (
+        !Array.isArray(orders) ||
+        orders.length === 0
+      ) {
+        orderCount.textContent =
+          "0 đơn hàng";
 
         kitchenOrders.innerHTML = `
           <div class="empty-kitchen-state">
             <h2>Chưa có đơn mới</h2>
-            <p>Đơn khách gửi sẽ xuất hiện tại đây.</p>
+
+            <p>
+              Đơn khách gửi sẽ xuất hiện tại đây.
+            </p>
           </div>
         `;
 
         return;
       }
 
-      const sortedOrders = sortOrders(orders);
+      const sortedOrders =
+        sortOrders(orders);
 
       orderCount.textContent =
         `${sortedOrders.length} đơn hàng`;
 
-      kitchenOrders.innerHTML = sortedOrders
-        .map((order) => {
-          const orderId = escapeHtml(
-            order.orderId || "Không có mã đơn"
-          );
+      kitchenOrders.innerHTML =
+        sortedOrders
+          .map((order) => {
+            const orderId =
+              escapeHtml(
+                order.orderId ||
+                "Không có mã đơn"
+              );
 
-          const tableNumber = escapeHtml(
-            String(order.tableNumber || "--").padStart(
-              2,
-              "0"
-            )
-          );
+            const rawTableNumber =
+              String(
+                order.tableNumber ||
+                "--"
+              );
 
-          return `
-            <article class="kitchen-order-card">
-              <div class="kitchen-order-header">
-                <div>
-                  <p class="eyebrow">Mã đơn</p>
+            const tableNumber =
+              escapeHtml(
+                /^\d+$/.test(
+                  rawTableNumber
+                )
+                  ? rawTableNumber.padStart(
+                      2,
+                      "0"
+                    )
+                  : rawTableNumber
+              );
 
-                  <h2>${orderId}</h2>
-
-                  <p>Bàn số ${tableNumber}</p>
-
-                  <p class="order-created-time">
-                    ${formatDate(order.createdAt)}
-                  </p>
-                </div>
-
-                <span
+            return `
+              <article
+                class="kitchen-order-card"
+              >
+                <div
                   class="
-                    order-status-badge
-                    ${getStatusClass(order.status)}
+                    kitchen-order-header
                   "
                 >
-                  ${getStatusText(order.status)}
-                </span>
-              </div>
+                  <div>
+                    <p class="eyebrow">
+                      Mã đơn
+                    </p>
 
-              <div class="kitchen-item-list">
-                ${createOrderItemsHtml(order.items)}
-              </div>
+                    <h2>
+                      ${orderId}
+                    </h2>
 
-              <div class="kitchen-total">
-                <span>Tổng đơn</span>
+                    <p>
+                      Bàn số
+                      ${tableNumber}
+                    </p>
 
-                <strong>
-                  ${formatCurrency(order.totalAmount)}
-                </strong>
-              </div>
+                    ${createOrderTimeHtml(
+                      order
+                    )}
+                  </div>
 
-              <div class="kitchen-order-actions">
-                ${createActionButtonHtml(order)}
-              </div>
-            </article>
-          `;
-        })
-        .join("");
+                  <span
+                    class="
+                      order-status-badge
+                      ${getStatusClass(
+                        order.status
+                      )}
+                    "
+                  >
+                    ${getStatusText(
+                      order.status
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  class="
+                    kitchen-item-list
+                  "
+                >
+                  ${createOrderItemsHtml(
+                    order.items
+                  )}
+                </div>
+
+                <div
+                  class="kitchen-total"
+                >
+                  <span>
+                    Tổng đơn
+                  </span>
+
+                  <strong>
+                    ${formatCurrency(
+                      order.totalAmount
+                    )}
+                  </strong>
+                </div>
+
+                <div
+                  class="
+                    kitchen-order-actions
+                  "
+                >
+                  ${createActionButtonHtml(
+                    order
+                  )}
+                </div>
+              </article>
+            `;
+          })
+          .join("");
 
       attachOrderButtonEvents();
     }
 
+    /* =====================================================
+       BUTTON EVENTS
+    ===================================================== */
+
     function attachOrderButtonEvents() {
-      const actionButtons = document.querySelectorAll(
-        ".order-action-button[data-order-id]"
-      );
+      const actionButtons =
+        document.querySelectorAll(
+          ".order-action-button[data-order-id]"
+        );
 
-      actionButtons.forEach((button) => {
-        button.addEventListener("click", async () => {
-          const orderId = button.dataset.orderId;
-          const nextStatus = button.dataset.nextStatus;
+      actionButtons.forEach(
+        (button) => {
+          button.addEventListener(
+            "click",
+            async () => {
+              const orderId =
+                button.dataset.orderId;
 
-          await updateOrderStatus(
-            orderId,
-            nextStatus
+              const nextStatus =
+                button.dataset
+                  .nextStatus;
+
+              await updateOrderStatus(
+                orderId,
+                nextStatus
+              );
+            }
           );
-        });
-      });
+        }
+      );
     }
 
-    async function loadOrders(showLoading = true) {
+    /* =====================================================
+       LOAD ORDERS
+    ===================================================== */
+
+    async function loadOrders(
+      showLoading = true
+    ) {
       if (isLoading) {
         return;
       }
 
       isLoading = true;
-      refreshOrdersButton.disabled = true;
+
+      refreshOrdersButton.disabled =
+        true;
 
       if (showLoading) {
         showLoadingState();
       }
 
       try {
-        const response = await fetch(
-          `${API_URL}/orders`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
+        const response =
+          await fetch(
+            `${API_URL}/orders`,
+            {
+              method: "GET",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
 
         if (!response.ok) {
           throw new Error(
@@ -412,11 +760,17 @@
           );
         }
 
-        const data = await response.json();
+        const data =
+          await response.json();
 
-        const orders = Array.isArray(data)
-          ? data
-          : data.orders;
+        const orders =
+          Array.isArray(data)
+            ? data
+            : Array.isArray(
+                data?.orders
+              )
+              ? data.orders
+              : [];
 
         renderOrders(orders);
       } catch (error) {
@@ -430,20 +784,30 @@
 
         if (showLoading) {
           showErrorState(
-            error.message || "Vui lòng thử lại sau."
+            error.message ||
+            "Vui lòng thử lại sau."
           );
         }
       } finally {
         isLoading = false;
-        refreshOrdersButton.disabled = false;
+
+        refreshOrdersButton.disabled =
+          false;
       }
     }
+
+    /* =====================================================
+       UPDATE ORDER STATUS
+    ===================================================== */
 
     async function updateOrderStatus(
       orderId,
       nextStatus
     ) {
-      if (!orderId || !nextStatus) {
+      if (
+        !orderId ||
+        !nextStatus
+      ) {
         return;
       }
 
@@ -451,29 +815,54 @@
         return;
       }
 
-      updatingOrderId = orderId;
+      updatingOrderId =
+        orderId;
 
       try {
-        await loadOrders(false);
+        /*
+          Khi chuyển sang COMPLETED,
+          gửi thêm thời điểm hoàn thành.
+        */
+        const requestBody = {
+          status: nextStatus,
+        };
 
-        const response = await fetch(
-          `${API_URL}/orders/${encodeURIComponent(orderId)}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "application/json",
-            },
-            body: JSON.stringify({
-              status: nextStatus,
-            }),
-          }
-        );
+        if (
+          nextStatus ===
+          "COMPLETED"
+        ) {
+          requestBody.completedAt =
+            new Date().toISOString();
+        }
+
+        const response =
+          await fetch(
+            `${API_URL}/orders/${encodeURIComponent(
+              orderId
+            )}`,
+            {
+              method: "PUT",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify(
+                  requestBody
+                ),
+            }
+          );
 
         let result = {};
 
         try {
-          result = await response.json();
+          result =
+            await response.json();
         } catch (parseError) {
           result = {};
         }
@@ -481,12 +870,13 @@
         if (!response.ok) {
           throw new Error(
             result.message ||
-              `Máy chủ trả về lỗi ${response.status}`
+            `Máy chủ trả về lỗi ${response.status}`
           );
         }
 
         showToast(
-          nextStatus === "PREPARING"
+          nextStatus ===
+            "PREPARING"
             ? "Đơn đã chuyển sang chế biến"
             : "Đơn đã được hoàn thành"
         );
@@ -498,19 +888,27 @@
 
         showToast(
           error.message ||
-            "Không thể cập nhật trạng thái đơn"
+          "Không thể cập nhật trạng thái đơn"
         );
       } finally {
         updatingOrderId = null;
+
         await loadOrders(false);
       }
     }
+
+    /* =====================================================
+       INITIALIZATION
+    ===================================================== */
 
     refreshOrdersButton.addEventListener(
       "click",
       async () => {
         await loadOrders(false);
-        showToast("Đã làm mới danh sách đơn");
+
+        showToast(
+          "Đã làm mới danh sách đơn"
+        );
       }
     );
 

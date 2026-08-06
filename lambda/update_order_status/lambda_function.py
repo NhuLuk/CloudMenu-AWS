@@ -1,6 +1,9 @@
 import json
-import boto3
 from datetime import datetime, timezone
+
+import boto3
+from botocore.exceptions import ClientError
+
 
 dynamodb = boto3.resource(
     "dynamodb",
@@ -19,29 +22,58 @@ def create_response(status_code, body):
             "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
             "Content-Type": "application/json"
         },
-        "body": json.dumps(body, ensure_ascii=False)
+        "body": json.dumps(
+            body,
+            ensure_ascii=False
+        )
     }
 
 
 def lambda_handler(event, context):
     try:
-        print("EVENT:", json.dumps(event))
+        print(
+            "EVENT:",
+            json.dumps(
+                event,
+                ensure_ascii=False
+            )
+        )
 
-        path_parameters = event.get("pathParameters") or {}
-        order_id = path_parameters.get("orderId")
+        path_parameters = (
+            event.get("pathParameters")
+            or {}
+        )
+
+        order_id = path_parameters.get(
+            "orderId"
+        )
 
         if not order_id:
-            return create_response(400, {
-                "success": False,
-                "message": "Missing orderId"
-            })
+            return create_response(
+                400,
+                {
+                    "success": False,
+                    "message": "Missing orderId"
+                }
+            )
 
-        raw_body = event.get("body") or "{}"
+        raw_body = (
+            event.get("body")
+            or "{}"
+        )
 
         if isinstance(raw_body, str):
             body = json.loads(raw_body)
-        else:
+        elif isinstance(raw_body, dict):
             body = raw_body
+        else:
+            return create_response(
+                400,
+                {
+                    "success": False,
+                    "message": "Invalid request body"
+                }
+            )
 
         new_status = body.get("status")
 
@@ -52,55 +84,142 @@ def lambda_handler(event, context):
         }
 
         if new_status not in allowed_statuses:
-            return create_response(400, {
-                "success": False,
-                "message": "Invalid order status"
-            })
+            return create_response(
+                400,
+                {
+                    "success": False,
+                    "message": "Invalid order status"
+                }
+            )
 
-        updated_at = datetime.now(timezone.utc).isoformat()
+        updated_at = datetime.now(
+            timezone.utc
+        ).isoformat()
 
-        table.update_item(
+        expression_attribute_names = {
+            "#status": "status"
+        }
+
+        expression_attribute_values = {
+            ":status": new_status,
+            ":updatedAt": updated_at
+        }
+
+        update_expression = (
+            "SET #status = :status, "
+            "updatedAt = :updatedAt"
+        )
+
+        completed_at = None
+
+        if new_status == "COMPLETED":
+            completed_at = (
+                body.get("completedAt")
+                or updated_at
+            )
+
+            update_expression += (
+                ", completedAt = :completedAt"
+            )
+
+            expression_attribute_values[
+                ":completedAt"
+            ] = completed_at
+
+        response = table.update_item(
             Key={
                 "orderId": order_id
             },
-            UpdateExpression=(
-                "SET #status = :status, "
-                "updatedAt = :updatedAt"
+            UpdateExpression=update_expression,
+            ExpressionAttributeNames=(
+                expression_attribute_names
             ),
-            ExpressionAttributeNames={
-                "#status": "status"
-            },
-            ExpressionAttributeValues={
-                ":status": new_status,
-                ":updatedAt": updated_at
-            },
-            ConditionExpression="attribute_exists(orderId)"
+            ExpressionAttributeValues=(
+                expression_attribute_values
+            ),
+            ConditionExpression=(
+                "attribute_exists(orderId)"
+            ),
+            ReturnValues="ALL_NEW"
         )
 
-        return create_response(200, {
+        updated_order = response.get(
+            "Attributes",
+            {}
+        )
+
+        response_body = {
             "success": True,
-            "message": "Order status updated",
+            "message": (
+                "Order status updated"
+            ),
             "orderId": order_id,
             "status": new_status,
-            "updatedAt": updated_at
-        })
+            "updatedAt": updated_at,
+            "order": updated_order
+        }
 
-    except table.meta.client.exceptions.ConditionalCheckFailedException:
-        return create_response(404, {
-            "success": False,
-            "message": "Order not found"
-        })
+        if completed_at:
+            response_body["completedAt"] = (
+                completed_at
+            )
+
+        return create_response(
+            200,
+            response_body
+        )
 
     except json.JSONDecodeError:
-        return create_response(400, {
-            "success": False,
-            "message": "Invalid JSON body"
-        })
+        return create_response(
+            400,
+            {
+                "success": False,
+                "message": "Invalid JSON body"
+            }
+        )
+
+    except ClientError as error:
+        error_code = (
+            error.response
+            .get("Error", {})
+            .get("Code")
+        )
+
+        if (
+            error_code
+            == "ConditionalCheckFailedException"
+        ):
+            return create_response(
+                404,
+                {
+                    "success": False,
+                    "message": "Order not found"
+                }
+            )
+
+        print(
+            "DYNAMODB ERROR:",
+            repr(error)
+        )
+
+        return create_response(
+            500,
+            {
+                "success": False,
+                "message": "DynamoDB update failed"
+            }
+        )
 
     except Exception as error:
-        print("UPDATE ORDER ERROR:", repr(error))
+        print(
+            "UPDATE ORDER ERROR:",
+            repr(error)
+        )
 
-        return create_response(500, {
-            "success": False,
-            "message": str(error)
-        })
+        return create_response(
+            500,
+            {
+                "success": False,
+                "message": str(error)
+            }
+        )
