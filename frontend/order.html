@@ -58,6 +58,37 @@
         </span>
       </div>
 
+      <div class="order-time-info">
+        <div class="order-time-item">
+          <span>Đặt lúc</span>
+
+          <strong id="order-created-time">
+            --:--:--
+          </strong>
+        </div>
+
+        <div class="order-time-item">
+          <span>Đã chờ</span>
+
+          <strong id="order-waiting-time">
+            00 phút 00 giây
+          </strong>
+        </div>
+
+        <div class="order-time-item">
+          <span>Thời gian dự kiến</span>
+
+          <strong>5 - 7 phút</strong>
+        </div>
+      </div>
+
+      <p
+        id="order-waiting-message"
+        class="order-waiting-message"
+      >
+        Nhà hàng đang tiếp nhận đơn của bạn.
+      </p>
+
       <div class="status-timeline">
         <div class="status-step active">
           <span>1</span>
@@ -109,9 +140,18 @@
     const API_URL =
       "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com";
 
-    const storedOrder = JSON.parse(
-      localStorage.getItem("cloudmenu-order")
-    );
+    let storedOrder = null;
+
+    try {
+      storedOrder = JSON.parse(
+        localStorage.getItem("cloudmenu-order")
+      );
+    } catch (error) {
+      console.error(
+        "Không đọc được đơn trong localStorage:",
+        error
+      );
+    }
 
     const urlParams =
       new URLSearchParams(window.location.search);
@@ -143,11 +183,27 @@
         "#back-to-menu-link"
       );
 
+    const orderCreatedTimeElement =
+      document.querySelector(
+        "#order-created-time"
+      );
+
+    const orderWaitingTimeElement =
+      document.querySelector(
+        "#order-waiting-time"
+      );
+
+    const orderWaitingMessageElement =
+      document.querySelector(
+        "#order-waiting-message"
+      );
+
     const toast =
       document.querySelector("#toast");
 
     let currentOrder = storedOrder;
     let isLoading = false;
+    let waitingTimer = null;
 
     function normalizeTableNumber(value) {
       if (!value) {
@@ -222,6 +278,57 @@
       return `${formattedValue} VND`;
     }
 
+    function formatOrderTime(value) {
+      const date =
+        new Date(value);
+
+      if (
+        Number.isNaN(
+          date.getTime()
+        )
+      ) {
+        return "--:--:--";
+      }
+
+      return new Intl.DateTimeFormat(
+        "vi-VN",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }
+      ).format(date);
+    }
+
+    function formatWaitingDuration(
+      milliseconds
+    ) {
+      const totalSeconds =
+        Math.max(
+          0,
+          Math.floor(
+            milliseconds / 1000
+          )
+        );
+
+      const minutes =
+        Math.floor(
+          totalSeconds / 60
+        );
+
+      const seconds =
+        totalSeconds % 60;
+
+      return `${String(minutes).padStart(
+        2,
+        "0"
+      )} phút ${String(seconds).padStart(
+        2,
+        "0"
+      )} giây`;
+    }
+
     function getStatusText(status) {
       const statusMap = {
         PENDING: "Đã gửi đơn",
@@ -232,6 +339,56 @@
       return (
         statusMap[status] ||
         "Không xác định"
+      );
+    }
+
+    function getWaitingMessage(
+      status,
+      waitingMinutes
+    ) {
+      if (status === "COMPLETED") {
+        return (
+          "Món ăn đã sẵn sàng. " +
+          "Nhân viên sẽ mang món ra bàn trong giây lát."
+        );
+      }
+
+      if (status === "PREPARING") {
+        if (waitingMinutes > 7) {
+          return (
+            "Xin lỗi vì sự chậm trễ. " +
+            "Nhà hàng đang ưu tiên chuẩn bị món của bạn."
+          );
+        }
+
+        if (waitingMinutes >= 5) {
+          return (
+            "Món ăn sắp hoàn thành, " +
+            "vui lòng chờ thêm ít phút."
+          );
+        }
+
+        return (
+          "Đầu bếp đang chuẩn bị món ăn của bạn."
+        );
+      }
+
+      if (waitingMinutes > 7) {
+        return (
+          "Đơn của bạn đang chờ lâu hơn dự kiến. " +
+          "Nhà hàng đang kiểm tra và xử lý."
+        );
+      }
+
+      if (waitingMinutes >= 5) {
+        return (
+          "Đơn của bạn đang được xử lý. " +
+          "Món ăn dự kiến sắp hoàn thành."
+        );
+      }
+
+      return (
+        "Nhà hàng đã nhận đơn và sẽ bắt đầu chuẩn bị món."
       );
     }
 
@@ -263,12 +420,138 @@
         getStatusText(status);
     }
 
+    function updateWaitingTime() {
+      if (!currentOrder?.createdAt) {
+        orderCreatedTimeElement.textContent =
+          "--:--:--";
+
+        orderWaitingTimeElement.textContent =
+          "Không có dữ liệu";
+
+        return;
+      }
+
+      const createdAt =
+        new Date(
+          currentOrder.createdAt
+        );
+
+      if (
+        Number.isNaN(
+          createdAt.getTime()
+        )
+      ) {
+        orderCreatedTimeElement.textContent =
+          "--:--:--";
+
+        orderWaitingTimeElement.textContent =
+          "Không có dữ liệu";
+
+        return;
+      }
+
+      orderCreatedTimeElement.textContent =
+        formatOrderTime(
+          currentOrder.createdAt
+        );
+
+      const elapsedMilliseconds =
+        Date.now() -
+        createdAt.getTime();
+
+      const waitingMinutes =
+        elapsedMilliseconds /
+        1000 /
+        60;
+
+      orderWaitingTimeElement.textContent =
+        formatWaitingDuration(
+          elapsedMilliseconds
+        );
+
+      orderWaitingMessageElement.textContent =
+        getWaitingMessage(
+          currentOrder.status,
+          waitingMinutes
+        );
+
+      orderWaitingMessageElement.classList.toggle(
+        "warning",
+        currentOrder.status !== "COMPLETED" &&
+          waitingMinutes >= 5 &&
+          waitingMinutes <= 7
+      );
+
+      orderWaitingMessageElement.classList.toggle(
+        "late",
+        currentOrder.status !== "COMPLETED" &&
+          waitingMinutes > 7
+      );
+
+      orderWaitingMessageElement.classList.toggle(
+        "completed",
+        currentOrder.status === "COMPLETED"
+      );
+    }
+
+    function startWaitingTimer() {
+      if (waitingTimer) {
+        window.clearInterval(
+          waitingTimer
+        );
+
+        waitingTimer = null;
+      }
+
+      updateWaitingTime();
+
+      if (
+        currentOrder?.status !==
+        "COMPLETED"
+      ) {
+        waitingTimer =
+          window.setInterval(
+            updateWaitingTime,
+            1000
+          );
+      }
+    }
+
+    function stopWaitingTimer() {
+      if (!waitingTimer) {
+        return;
+      }
+
+      window.clearInterval(
+        waitingTimer
+      );
+
+      waitingTimer = null;
+    }
+
     function renderEmptyOrder() {
+      stopWaitingTimer();
+
       orderIdElement.textContent =
         "Chưa có đơn";
 
       orderStatusBadge.textContent =
         "Không có dữ liệu";
+
+      orderCreatedTimeElement.textContent =
+        "--:--:--";
+
+      orderWaitingTimeElement.textContent =
+        "Không có dữ liệu";
+
+      orderWaitingMessageElement.textContent =
+        "Chưa có đơn gọi món nào.";
+
+      orderWaitingMessageElement.classList.remove(
+        "warning",
+        "late",
+        "completed"
+      );
 
       orderSummary.innerHTML = `
         <p class="empty-cart">
@@ -291,8 +574,12 @@
         currentOrder.status
       );
 
+      startWaitingTimer();
+
       const items =
-        Array.isArray(currentOrder.items)
+        Array.isArray(
+          currentOrder.items
+        )
           ? currentOrder.items
           : [];
 
@@ -351,20 +638,6 @@
       `;
     }
 
-    function showToast(message) {
-      toast.textContent = message;
-
-      toast.classList.add(
-        "visible"
-      );
-
-      window.setTimeout(() => {
-        toast.classList.remove(
-          "visible"
-        );
-      }, 2000);
-    }
-
     async function loadLatestOrder() {
       const currentOrderId =
         getCurrentOrderId();
@@ -379,16 +652,18 @@
       isLoading = true;
 
       try {
-        const response = await fetch(
-          `${API_URL}/orders`,
-          {
-            method: "GET",
+        const response =
+          await fetch(
+            `${API_URL}/orders`,
+            {
+              method: "GET",
 
-            headers: {
-              Accept: "application/json",
-            },
-          }
-        );
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
 
         if (!response.ok) {
           throw new Error(
@@ -402,7 +677,9 @@
         const orders =
           Array.isArray(data)
             ? data
-            : Array.isArray(data?.orders)
+            : Array.isArray(
+                data?.orders
+              )
               ? data.orders
               : [];
 
@@ -417,13 +694,21 @@
           return;
         }
 
-        currentOrder =
-          latestOrder;
+        currentOrder = {
+          ...currentOrder,
+          ...latestOrder,
+
+          createdAt:
+            latestOrder.createdAt ||
+            currentOrder?.createdAt ||
+            storedOrder?.createdAt ||
+            null,
+        };
 
         localStorage.setItem(
           "cloudmenu-order",
           JSON.stringify(
-            latestOrder
+            currentOrder
           )
         );
 
@@ -441,7 +726,6 @@
 
     updateTableInformation();
     renderOrderDetails();
-
     loadLatestOrder();
 
     window.setInterval(() => {

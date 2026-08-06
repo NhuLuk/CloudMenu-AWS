@@ -134,7 +134,9 @@ const allowedTables = [
 ];
 
 const urlParams =
-  new URLSearchParams(window.location.search);
+  new URLSearchParams(
+    window.location.search
+  );
 
 const rawTableParam =
   urlParams.get("table");
@@ -158,7 +160,9 @@ const normalizedTableNumber =
   normalizeTableNumber(rawTableParam);
 
 const tableNumber =
-  allowedTables.includes(normalizedTableNumber)
+  allowedTables.includes(
+    normalizedTableNumber
+  )
     ? normalizedTableNumber
     : null;
 
@@ -167,6 +171,7 @@ const tableNumber =
 let selectedCategory = "Tất cả";
 let cart = [];
 let isSubmittingOrder = false;
+let toastTimer = null;
 
 /* ===== DOM ELEMENTS ===== */
 
@@ -257,7 +262,58 @@ const toast =
 
 /* ===== ACCESS CONTROL ===== */
 
+function validateRequiredElements() {
+  const requiredElements = {
+    qrRequiredScreen,
+    appContent,
+    tableLabel,
+    cartTableLabel,
+    menuList,
+    menuCount,
+    searchInput,
+    categoryList,
+    cartButton,
+    cartCount,
+    cartPanel,
+    closeCartButton,
+    overlay,
+    cartItems,
+    cartTotal,
+    submitOrderButton,
+    toast,
+  };
+
+  const missingElements =
+    Object.entries(requiredElements)
+      .filter(
+        ([, element]) => !element
+      )
+      .map(([name]) => name);
+
+  if (missingElements.length > 0) {
+    console.error(
+      "Thiếu phần tử HTML:",
+      missingElements
+    );
+
+    return false;
+  }
+
+  return true;
+}
+
 function validateTableAccess() {
+  if (
+    !qrRequiredScreen ||
+    !appContent
+  ) {
+    console.error(
+      "Không tìm thấy #qr-required-screen hoặc #app-content trong index.html"
+    );
+
+    return false;
+  }
+
   if (!tableNumber) {
     qrRequiredScreen.classList.add(
       "visible"
@@ -282,6 +338,14 @@ function validateTableAccess() {
 }
 
 function updateTableLabels() {
+  if (
+    !tableLabel ||
+    !cartTableLabel ||
+    !tableNumber
+  ) {
+    return;
+  }
+
   const label =
     `Bàn số ${tableNumber}`;
 
@@ -293,7 +357,9 @@ function updateTableLabels() {
 
 function formatCurrency(value) {
   const formattedValue =
-    new Intl.NumberFormat("vi-VN").format(
+    new Intl.NumberFormat(
+      "vi-VN"
+    ).format(
       Number(value) || 0
     );
 
@@ -301,17 +367,30 @@ function formatCurrency(value) {
 }
 
 function showToast(message) {
+  if (!toast) {
+    return;
+  }
+
+  if (toastTimer) {
+    window.clearTimeout(
+      toastTimer
+    );
+  }
+
   toast.textContent = message;
 
   toast.classList.add(
     "visible"
   );
 
-  window.setTimeout(() => {
-    toast.classList.remove(
-      "visible"
-    );
-  }, 2200);
+  toastTimer =
+    window.setTimeout(() => {
+      toast.classList.remove(
+        "visible"
+      );
+
+      toastTimer = null;
+    }, 2200);
 }
 
 /* ===== CATEGORY FUNCTIONS ===== */
@@ -328,6 +407,10 @@ function getCategories() {
 }
 
 function renderCategories() {
+  if (!categoryList) {
+    return;
+  }
+
   categoryList.innerHTML =
     getCategories()
       .map(
@@ -352,9 +435,11 @@ function renderCategories() {
 
 function getFilteredMenu() {
   const keyword =
-    searchInput.value
-      .trim()
-      .toLowerCase();
+    searchInput
+      ? searchInput.value
+          .trim()
+          .toLowerCase()
+      : "";
 
   return menuItems.filter(
     (item) => {
@@ -380,6 +465,13 @@ function getFilteredMenu() {
 }
 
 function renderMenu() {
+  if (
+    !menuList ||
+    !menuCount
+  ) {
+    return;
+  }
+
   const filteredItems =
     getFilteredMenu();
 
@@ -454,6 +546,10 @@ function addToCart(itemId) {
     );
 
   if (!menuItem) {
+    showToast(
+      "Không tìm thấy món ăn"
+    );
+
     return;
   }
 
@@ -510,7 +606,8 @@ function updateQuantity(
 function getCartQuantity() {
   return cart.reduce(
     (total, item) =>
-      total + item.quantity,
+      total +
+      Number(item.quantity || 0),
     0
   );
 }
@@ -519,13 +616,22 @@ function getCartTotal() {
   return cart.reduce(
     (total, item) =>
       total +
-      item.price *
-        item.quantity,
+      Number(item.price || 0) *
+      Number(item.quantity || 0),
     0
   );
 }
 
 function renderCart() {
+  if (
+    !cartCount ||
+    !cartTotal ||
+    !cartItems ||
+    !submitOrderButton
+  ) {
+    return;
+  }
+
   cartCount.textContent =
     getCartQuantity();
 
@@ -563,7 +669,7 @@ function renderCart() {
               <p>
                 ${formatCurrency(
                   item.price *
-                    item.quantity
+                  item.quantity
                 )}
               </p>
             </div>
@@ -598,6 +704,13 @@ function renderCart() {
 }
 
 function openCart() {
+  if (
+    !cartPanel ||
+    !overlay
+  ) {
+    return;
+  }
+
   cartPanel.classList.add(
     "open"
   );
@@ -608,6 +721,13 @@ function openCart() {
 }
 
 function closeCart() {
+  if (
+    !cartPanel ||
+    !overlay
+  ) {
+    return;
+  }
+
   cartPanel.classList.remove(
     "open"
   );
@@ -621,6 +741,10 @@ function closeCart() {
 
 async function submitOrder() {
   if (!tableNumber) {
+    showToast(
+      "Không xác định được số bàn"
+    );
+
     return;
   }
 
@@ -641,8 +765,10 @@ async function submitOrder() {
       (item) => ({
         itemId: item.id,
         name: item.name,
-        price: item.price,
-        quantity: item.quantity,
+        price:
+          Number(item.price) || 0,
+        quantity:
+          Number(item.quantity) || 0,
       })
     ),
 
@@ -710,11 +836,16 @@ async function submitOrder() {
     closeCart();
 
     window.location.href =
-  `order.html?table=${encodeURIComponent(
-    tableNumber
-  )}&orderId=${encodeURIComponent(
-    order.orderId
-  )}`;
+      `order.html?table=${encodeURIComponent(
+        tableNumber
+      )}&orderId=${encodeURIComponent(
+        order.orderId
+      )}`;
+  } catch (error) {
+    console.error(
+      "SUBMIT ORDER ERROR:",
+      error
+    );
 
     showToast(
       error.message ||
@@ -723,8 +854,10 @@ async function submitOrder() {
   } finally {
     isSubmittingOrder = false;
 
-    submitOrderButton.textContent =
-      "Gửi đơn gọi món";
+    if (submitOrderButton) {
+      submitOrderButton.textContent =
+        "Gửi đơn gọi món";
+    }
 
     renderCart();
   }
@@ -732,107 +865,123 @@ async function submitOrder() {
 
 /* ===== EVENT LISTENERS ===== */
 
-categoryList.addEventListener(
-  "click",
-  (event) => {
-    const button =
-      event.target.closest(
-        "[data-category]"
+function registerEventListeners() {
+  categoryList?.addEventListener(
+    "click",
+    (event) => {
+      const button =
+        event.target.closest(
+          "[data-category]"
+        );
+
+      if (!button) {
+        return;
+      }
+
+      selectedCategory =
+        button.dataset.category;
+
+      renderCategories();
+      renderMenu();
+    }
+  );
+
+  menuList?.addEventListener(
+    "click",
+    (event) => {
+      const button =
+        event.target.closest(
+          "[data-add-item]"
+        );
+
+      if (!button) {
+        return;
+      }
+
+      addToCart(
+        button.dataset.addItem
       );
-
-    if (!button) {
-      return;
     }
+  );
 
-    selectedCategory =
-      button.dataset.category;
+  cartItems?.addEventListener(
+    "click",
+    (event) => {
+      const button =
+        event.target.closest(
+          "[data-change]"
+        );
 
-    renderCategories();
-    renderMenu();
-  }
-);
+      if (!button) {
+        return;
+      }
 
-menuList.addEventListener(
-  "click",
-  (event) => {
-    const button =
-      event.target.closest(
-        "[data-add-item]"
+      updateQuantity(
+        button.dataset.itemId,
+        Number(
+          button.dataset.change
+        )
       );
-
-    if (!button) {
-      return;
     }
+  );
 
-    addToCart(
-      button.dataset.addItem
-    );
-  }
-);
+  searchInput?.addEventListener(
+    "input",
+    renderMenu
+  );
 
-cartItems.addEventListener(
-  "click",
-  (event) => {
-    const button =
-      event.target.closest(
-        "[data-change]"
-      );
+  cartButton?.addEventListener(
+    "click",
+    openCart
+  );
 
-    if (!button) {
-      return;
+  closeCartButton?.addEventListener(
+    "click",
+    closeCart
+  );
+
+  overlay?.addEventListener(
+    "click",
+    closeCart
+  );
+
+  submitOrderButton?.addEventListener(
+    "click",
+    submitOrder
+  );
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Escape") {
+        closeCart();
+      }
     }
-
-    updateQuantity(
-      button.dataset.itemId,
-      Number(
-        button.dataset.change
-      )
-    );
-  }
-);
-
-searchInput.addEventListener(
-  "input",
-  renderMenu
-);
-
-cartButton.addEventListener(
-  "click",
-  openCart
-);
-
-closeCartButton.addEventListener(
-  "click",
-  closeCart
-);
-
-overlay.addEventListener(
-  "click",
-  closeCart
-);
-
-submitOrderButton.addEventListener(
-  "click",
-  submitOrder
-);
-
-document.addEventListener(
-  "keydown",
-  (event) => {
-    if (event.key === "Escape") {
-      closeCart();
-    }
-  }
-);
+  );
+}
 
 /* ===== INITIALIZATION ===== */
 
-const hasValidTable =
-  validateTableAccess();
+function initializeApp() {
+  const hasRequiredElements =
+    validateRequiredElements();
 
-if (hasValidTable) {
+  if (!hasRequiredElements) {
+    return;
+  }
+
+  const hasValidTable =
+    validateTableAccess();
+
+  if (!hasValidTable) {
+    return;
+  }
+
   updateTableLabels();
   renderCategories();
   renderMenu();
   renderCart();
+  registerEventListeners();
 }
+
+initializeApp();
