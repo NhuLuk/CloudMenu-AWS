@@ -710,14 +710,11 @@ async function submitOrder() {
     closeCart();
 
     window.location.href =
-      `order.html?table=${encodeURIComponent(
-        tableNumber
-      )}`;
-  } catch (error) {
-    console.error(
-      "SUBMIT ORDER ERROR:",
-      error
-    );
+  `order.html?table=${encodeURIComponent(
+    tableNumber
+  )}&orderId=${encodeURIComponent(
+    order.orderId
+  )}`;
 
     showToast(
       error.message ||
