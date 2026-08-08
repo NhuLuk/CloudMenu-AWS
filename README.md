@@ -1,5 +1,4 @@
 # CloudMenu AWS
-
 CloudMenu là hệ thống gọi món trực tuyến tại bàn, được xây dựng theo kiến trúc Serverless trên Amazon Web Services (AWS).
 
 Khách hàng quét mã QR riêng tại từng bàn để mở thực đơn, chọn món và gửi đơn gọi món. Các yêu cầu được xử lý thông qua Amazon API Gateway và AWS Lambda, sau đó dữ liệu đơn hàng được lưu trữ trong Amazon DynamoDB.
@@ -7,7 +6,6 @@ Khách hàng quét mã QR riêng tại từng bàn để mở thực đơn, ch�
 Nhân viên bếp sử dụng giao diện riêng để tiếp nhận đơn và cập nhật trạng thái chế biến. Hệ thống đồng thời cung cấp Dashboard thống kê giúp Admin/Manager theo dõi tổng số đơn, doanh thu, trạng thái đơn hàng, doanh thu theo bàn và các món được gọi nhiều nhất.
 
 ---
-
 ## Chức năng chính
 
 ### Khách hàng
@@ -48,10 +46,7 @@ Nhân viên bếp sử dụng giao diện riêng để tiếp nhận đơn và c
 - Xem tổng số món đã được gọi
 - Tự động cập nhật dữ liệu thống kê
 
----
-
 ## Kiến trúc hệ thống
-
 ### Frontend
 
 - HTML
@@ -92,11 +87,8 @@ frontend/kitchen.html
 
 Dashboard
 frontend/dashboard.html
-
 ### CORS
-
 API Gateway cần cho phép các origin phù hợp.
 Ví dụ:
 http://127.0.0.1:5500
-
 https://<cloudfront-domain>
