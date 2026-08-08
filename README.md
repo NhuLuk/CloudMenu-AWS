@@ -87,8 +87,13 @@ frontend/kitchen.html
 
 Dashboard
 frontend/dashboard.html
-### CORS
+
+## CORS
+
 API Gateway cần cho phép các origin phù hợp.
+
 Ví dụ:
+
+```text
 http://127.0.0.1:5500
 https://<cloudfront-domain>
