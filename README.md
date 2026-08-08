@@ -69,43 +69,6 @@ Nhân viên bếp sử dụng giao diện riêng để tiếp nhận đơn và c
 ### Monitoring và Security
 
 - AWS Identity and Access Management (IAM)
-- Amazon CloudWatch
-
-### Luồng tải giao diện
-
-
-Customer / Kitchen / Admin
-          │
-          ▼
-Amazon CloudFront
-          │
-          ▼
-      Amazon S3
-          │
-          ▼
-Frontend HTML/CSS/JavaScript
-
-### Luồng xử lý dữ liệu
-
-Frontend / Browser
-        │
-        ▼
-Amazon API Gateway
-        │
-        ├── POST /order
-        ├── GET /orders
-        └── PUT /orders/{orderId}
-        │
-        ▼
-AWS Lambda
-        │
-        ├── createOrder
-        ├── getOrders
-        └── updateOrderStatus
-        │
-        ▼
-Amazon DynamoDB
-CloudMenuOrders
 
 ### Dịch vụ AWS sử dụng
 
@@ -135,4 +98,5 @@ frontend/dashboard.html
 API Gateway cần cho phép các origin phù hợp.
 Ví dụ:
 http://127.0.0.1:5500
+
 https://<cloudfront-domain>
