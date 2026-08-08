@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Dashboard - CloudMenu</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f5f5f5;
+        color: #222;
+      }
+
+      .header {
+        padding: 32px 40px;
+        background: white;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #777;
+        letter-spacing: 1px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 32px;
+      }
+
+      .subtitle {
+        margin: 8px 0 0;
+        color: #666;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 32px 24px;
+      }
+
+      .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+      }
+
+      .dashboard-header h2 {
+        margin: 0;
+      }
+
+      .refresh-button {
+        border: none;
+        background: #222;
+        color: white;
+        padding: 10px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .refresh-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* =========================
+       STAT CARDS
+    ========================= */
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .stat-card {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid #ddd;
+      }
+
+      .stat-label {
+        color: #777;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+
+      .stat-value {
+        font-size: 28px;
+        font-weight: bold;
+      }
+
+      /* =========================
+       CHART CARDS
+    ========================= */
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        gap: 20px;
+      }
+
+      .chart-card {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 24px;
+      }
+
+      .chart-card h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+
+      /* =========================
+       STATUS
+    ========================= */
+
+      .status-row {
+        margin-bottom: 18px;
+      }
+
+      .status-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 7px;
+      }
+
+      .status-bar {
+        height: 12px;
+        background: #eee;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .status-bar-fill {
+        height: 100%;
+        border-radius: 10px;
+      }
+
+      .pending {
+        background: #f0ad4e;
+      }
+
+      .preparing {
+        background: #5bc0de;
+      }
+
+      .completed {
+        background: #5cb85c;
+      }
+
+      /* =========================
+       TABLE
+    ========================= */
+
+      .table-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .table-row {
+        display: grid;
+        grid-template-columns: 80px 1fr 120px;
+
+        align-items: center;
+        gap: 12px;
+      }
+
+      .table-number {
+        font-weight: bold;
+      }
+
+      .table-bar {
+        height: 12px;
+        background: #eee;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .table-bar-fill {
+        height: 100%;
+        background: #333;
+        border-radius: 10px;
+      }
+
+      .table-revenue {
+        text-align: right;
+        font-weight: bold;
+      }
+
+      /* =========================
+       POPULAR FOOD
+    ========================= */
+
+      .food-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .food-row {
+        display: grid;
+        grid-template-columns: 1fr 80px;
+
+        gap: 12px;
+        align-items: center;
+      }
+
+      .food-quantity {
+        text-align: right;
+        font-weight: bold;
+      }
+
+      /* =========================
+       LOADING / ERROR
+    ========================= */
+
+      .message {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        color: #666;
+      }
+
+      @media (max-width: 800px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 500px) {
+        .header {
+          padding: 24px;
+        }
+
+        .container {
+          padding: 20px 16px;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .dashboard-header {
+          align-items: flex-start;
+          gap: 12px;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="header">
+      <p class="eyebrow">CloudMenu</p>
+
+      <h1>Restaurant Dashboard</h1>
+
+      <p class="subtitle">Tổng quan hoạt động gọi món</p>
+    </header>
+
+    <main class="container">
+      <div class="dashboard-header">
+        <div>
+          <h2>Overview</h2>
+
+          <p id="last-updated">Đang tải dữ liệu...</p>
+        </div>
+
+        <button id="refresh-button" class="refresh-button" type="button">
+          Làm mới
+        </button>
+      </div>
+
+      <!-- =========================
+         STATISTICS
+    ========================== -->
+
+      <section class="stats-grid">
+        <article class="stat-card">
+          <div class="stat-label">Tổng đơn hàng</div>
+
+          <div id="total-orders" class="stat-value">0</div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-label">Doanh thu</div>
+
+          <div id="total-revenue" class="stat-value">0 VND</div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-label">Đang chờ</div>
+
+          <div id="pending-orders" class="stat-value">0</div>
+        </article>
+
+        <article class="stat-card">
+          <div class="stat-label">Đang chế biến</div>
+
+          <div id="preparing-orders" class="stat-value">0</div>
+        </article>
+      </section>
+
+      <section class="charts-grid">
+        <!-- =========================
+           ORDER STATUS
+      ========================== -->
+
+        <article class="chart-card">
+          <h3>Trạng thái đơn hàng</h3>
+
+          <div id="status-chart"></div>
+        </article>
+
+        <!-- =========================
+           TABLE REVENUE
+      ========================== -->
+
+        <article class="chart-card">
+          <h3>Doanh thu theo bàn</h3>
+
+          <div id="table-chart" class="table-list"></div>
+        </article>
+
+        <!-- =========================
+           POPULAR FOOD
+      ========================== -->
+
+        <article class="chart-card">
+          <h3>Món được gọi nhiều nhất</h3>
+
+          <div id="food-chart" class="food-list"></div>
+        </article>
+
+        <!-- =========================
+           COMPLETED
+      ========================== -->
+
+        <article class="chart-card">
+          <h3>Tổng quan</h3>
+
+          <div class="status-row">
+            <div class="status-header">
+              <span> Đã hoàn thành </span>
+
+              <strong id="completed-orders"> 0 </strong>
+            </div>
+
+            <div class="status-bar">
+              <div
+                id="completed-progress"
+                class="status-bar-fill completed"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="status-row">
+            <div class="status-header">
+              <span> Tổng số món </span>
+
+              <strong id="total-items"> 0 </strong>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const API_URL = "https://zcbix27iq9.execute-api.us-east-1.amazonaws.com";
+
+      const refreshButton = document.querySelector("#refresh-button");
+
+      const lastUpdated = document.querySelector("#last-updated");
+
+      /*
+       * ================================
+       * FORMATTERS
+       * ================================
+       */
+
+      function formatCurrency(value) {
+        return (
+          new Intl.NumberFormat("vi-VN").format(Number(value) || 0) + " VND"
+        );
+      }
+
+      function formatNumber(value) {
+        return new Intl.NumberFormat("vi-VN").format(Number(value) || 0);
+      }
+
+      /*
+       * ================================
+       * GET ORDERS
+       * ================================
+       */
+
+      async function getOrders() {
+        const response = await fetch(`${API_URL}/orders`, {
+          method: "GET",
+
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+          return data;
+        }
+
+        if (Array.isArray(data?.orders)) {
+          return data.orders;
+        }
+
+        return [];
+      }
+
+      /*
+       * ================================
+       * CALCULATE STATISTICS
+       * ================================
+       */
+
+      function calculateStatistics(orders) {
+        const statistics = {
+          totalOrders: orders.length,
+
+          totalRevenue: 0,
+
+          pending: 0,
+
+          preparing: 0,
+
+          completed: 0,
+
+          totalItems: 0,
+
+          tables: {},
+
+          foods: {},
+        };
+
+        orders.forEach((order) => {
+          /*
+           * Revenue
+           */
+
+          statistics.totalRevenue += Number(order.totalAmount) || 0;
+
+          /*
+           * Status
+           */
+
+          if (order.status === "PENDING") {
+            statistics.pending++;
+          } else if (order.status === "PREPARING") {
+            statistics.preparing++;
+          } else if (order.status === "COMPLETED") {
+            statistics.completed++;
+          }
+
+          /*
+           * Table
+           */
+
+          const table = String(order.tableNumber || "--").padStart(2, "0");
+
+          if (!statistics.tables[table]) {
+            statistics.tables[table] = 0;
+          }
+
+          statistics.tables[table] += Number(order.totalAmount) || 0;
+
+          /*
+           * Items
+           */
+
+          if (Array.isArray(order.items)) {
+            order.items.forEach((item) => {
+              const quantity = Number(item.quantity) || 0;
+
+              statistics.totalItems += quantity;
+
+              const name = item.name || "Unknown";
+
+              if (!statistics.foods[name]) {
+                statistics.foods[name] = 0;
+              }
+
+              statistics.foods[name] += quantity;
+            });
+          }
+        });
+
+        return statistics;
+      }
+
+      /*
+       * ================================
+       * RENDER STATISTICS
+       * ================================
+       */
+
+      function renderStatistics(statistics) {
+        document.querySelector("#total-orders").textContent = formatNumber(
+          statistics.totalOrders,
+        );
+
+        document.querySelector("#total-revenue").textContent = formatCurrency(
+          statistics.totalRevenue,
+        );
+
+        document.querySelector("#pending-orders").textContent = formatNumber(
+          statistics.pending,
+        );
+
+        document.querySelector("#preparing-orders").textContent = formatNumber(
+          statistics.preparing,
+        );
+
+        document.querySelector("#completed-orders").textContent = formatNumber(
+          statistics.completed,
+        );
+
+        document.querySelector("#total-items").textContent = formatNumber(
+          statistics.totalItems,
+        );
+
+        /*
+         * Completed percentage
+         */
+
+        const total = statistics.totalOrders;
+
+        const completedPercentage =
+          total === 0 ? 0 : (statistics.completed / total) * 100;
+
+        document.querySelector("#completed-progress").style.width =
+          `${completedPercentage}%`;
+      }
+
+      /*
+       * ================================
+       * STATUS CHART
+       * ================================
+       */
+
+      function renderStatusChart(statistics) {
+        const container = document.querySelector("#status-chart");
+
+        const total = statistics.totalOrders;
+
+        function percentage(value) {
+          if (total === 0) {
+            return 0;
+          }
+
+          return (value / total) * 100;
+        }
+
+        container.innerHTML = `
+
+        <div class="status-row">
+
+          <div class="status-header">
+            <span>
+              Đã gửi đơn
+            </span>
+
+            <strong>
+              ${statistics.pending}
+            </strong>
+          </div>
+
+          <div class="status-bar">
+            <div
+              class="status-bar-fill pending"
+              style="
+                width:
+                ${percentage(statistics.pending)}%
+              "
+            ></div>
+          </div>
+
+        </div>
+
+
+        <div class="status-row">
+
+          <div class="status-header">
+            <span>
+              Đang chế biến
+            </span>
+
+            <strong>
+              ${statistics.preparing}
+            </strong>
+          </div>
+
+          <div class="status-bar">
+            <div
+              class="status-bar-fill preparing"
+              style="
+                width:
+                ${percentage(statistics.preparing)}%
+              "
+            ></div>
+          </div>
+
+        </div>
+
+
+        <div class="status-row">
+
+          <div class="status-header">
+            <span>
+              Đã hoàn thành
+            </span>
+
+            <strong>
+              ${statistics.completed}
+            </strong>
+          </div>
+
+          <div class="status-bar">
+            <div
+              class="status-bar-fill completed"
+              style="
+                width:
+                ${percentage(statistics.completed)}%
+              "
+            ></div>
+          </div>
+
+        </div>
+
+      `;
+      }
+
+      /*
+       * ================================
+       * TABLE CHART
+       * ================================
+       */
+
+      function renderTableChart(statistics) {
+        const container = document.querySelector("#table-chart");
+
+        const tables = Object.entries(statistics.tables).sort(
+          ([, revenueA], [, revenueB]) => revenueB - revenueA,
+        );
+
+        if (tables.length === 0) {
+          container.innerHTML = `
+          <div class="message">
+            Chưa có dữ liệu
+          </div>
+        `;
+
+          return;
+        }
+
+        const maxRevenue = Math.max(...tables.map(([, revenue]) => revenue));
+
+        container.innerHTML = tables
+          .map(([table, revenue]) => {
+            const percentage =
+              maxRevenue === 0 ? 0 : (revenue / maxRevenue) * 100;
+
+            return `
+
+                <div class="table-row">
+
+                  <div class="table-number">
+                    Bàn ${table}
+                  </div>
+
+                  <div class="table-bar">
+
+                    <div
+                      class="table-bar-fill"
+                      style="
+                        width:
+                        ${percentage}%
+                      "
+                    ></div>
+
+                  </div>
+
+                  <div class="table-revenue">
+                    ${formatCurrency(revenue)}
+                  </div>
+
+                </div>
+
+              `;
+          })
+          .join("");
+      }
+
+      /*
+       * ================================
+       * POPULAR FOOD
+       * ================================
+       */
+
+      function renderFoodChart(statistics) {
+        const container = document.querySelector("#food-chart");
+
+        const foods = Object.entries(statistics.foods)
+          .sort(([, quantityA], [, quantityB]) => quantityB - quantityA)
+          .slice(0, 5);
+
+        if (foods.length === 0) {
+          container.innerHTML = `
+          <div class="message">
+            Chưa có dữ liệu
+          </div>
+        `;
+
+          return;
+        }
+
+        container.innerHTML = foods
+          .map(
+            ([name, quantity]) => `
+
+              <div class="food-row">
+
+                <span>
+                  ${escapeHtml(name)}
+                </span>
+
+                <span class="food-quantity">
+                  ${formatNumber(quantity)}
+                </span>
+
+              </div>
+
+            `,
+          )
+          .join("");
+      }
+
+      /*
+       * ================================
+       * HTML ESCAPE
+       * ================================
+       */
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      /*
+       * ================================
+       * LOAD DASHBOARD
+       * ================================
+       */
+
+      async function loadDashboard() {
+        refreshButton.disabled = true;
+
+        try {
+          const orders = await getOrders();
+
+          const statistics = calculateStatistics(orders);
+
+          renderStatistics(statistics);
+
+          renderStatusChart(statistics);
+
+          renderTableChart(statistics);
+
+          renderFoodChart(statistics);
+
+          const now = new Date();
+
+          lastUpdated.textContent = `Cập nhật lúc ${now.toLocaleTimeString(
+            "vi-VN",
+          )}`;
+        } catch (error) {
+          console.error("DASHBOARD ERROR:", error);
+
+          lastUpdated.textContent = "Không thể tải dữ liệu";
+        } finally {
+          refreshButton.disabled = false;
+        }
+      }
+
+      /*
+       * ================================
+       * EVENTS
+       * ================================
+       */
+
+      refreshButton.addEventListener("click", loadDashboard);
+
+      /*
+       * Initial load
+       */
+
+      loadDashboard();
+
+      /*
+       * Auto refresh
+       * Every 5 seconds
+       */
+
+      window.setInterval(loadDashboard, 5000);
+    </script>
+  </body>
+</html>
+```
